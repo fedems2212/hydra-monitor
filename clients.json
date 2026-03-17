@@ -1,7 +1,7 @@
 {
   "TECNICO": {
     "host": "3611799b91684ae9a07188329ddf117d.s1.eu.hivemq.cloud",
-    "port": 8884,
+    "port": 8883,
     "user": "fede35",
     "pass": "Nibuenonimalo35",
     "topic": "agua/#",
@@ -10,7 +10,7 @@
   },
   "VACOTO25": {
     "host": "3611799b91684ae9a07188329ddf117d.s1.eu.hivemq.cloud",
-    "port": 8884,
+    "port": 8883,
     "user": "fede35",
     "pass": "Nibuenonimalo35",
     "topic": "agua/Prueba_vacoto/rom_base_01/#",
@@ -19,7 +19,7 @@
   },
   "ACME2025": {
     "host": "3611799b91684ae9a07188329ddf117d.s1.eu.hivemq.cloud",
-    "port": 8884,
+    "port": 8883,
     "user": "fede35",
     "pass": "Nibuenonimalo35",
     "topic": "agua/acme/#",
