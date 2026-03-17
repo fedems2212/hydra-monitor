@@ -77,8 +77,10 @@ body::before {
 .back-btn.vis { display: flex; }
 
 /* ══ SCREENS ═════════════════════════════════════════════════ */
-.screen { display: none; position: relative; z-index: 1; padding: 12px 12px 80px; }
+.screen { display: none; position: relative; z-index: 1; padding: 12px 12px 80px; animation: screenIn .22s ease both; }
 .screen.active { display: block; }
+@keyframes screenIn { from{opacity:0;transform:translateX(18px)} to{opacity:1;transform:translateX(0)} }
+@keyframes screenBack { from{opacity:0;transform:translateX(-18px)} to{opacity:1;transform:translateX(0)} }
 
 /* ══ LOGIN SCREEN ════════════════════════════════════════════ */
 #screenLogin {
@@ -330,6 +332,7 @@ body::before {
 /* ══ ANIMATIONS ══════════════════════════════════════════════ */
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes spin { to{transform:rotate(360deg)} }
 @keyframes flash { 0%{background:rgba(0,212,255,.15)} 100%{background:transparent} }
 
 /* ══ RESPONSIVE ══════════════════════════════════════════════ */
@@ -393,6 +396,16 @@ body::before {
       <span id="modeHint">¿Sos técnico? </span>
       <a onclick="toggleLoginMode()"><span id="modeLinkText">Acceso técnico</span></a>
     </div>
+  </div>
+</div>
+
+<!-- WAITING SCREEN -->
+<div class="screen" id="screenWaiting">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:65vh;gap:18px;text-align:center;padding:24px">
+    <div style="width:52px;height:52px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
+    <div style="font-size:16px;font-weight:600;color:var(--text)" id="waitLabel">Conectando…</div>
+    <div style="font-size:12px;color:var(--text2)" id="waitSub">Esperando datos del equipo</div>
+    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:4px" id="waitTopic"></div>
   </div>
 </div>
 
@@ -625,14 +638,53 @@ function showLoginErr(msg) {
 
 function onConnected() {
   setConn('on', 'conectado');
-  showScreen('clients');
-  document.getElementById('bottomNav').classList.add('vis');
+  // Subscribe to data topics
   mqtt.subscribe(loginCfg.topic, { qos: 1 });
-  if (!loginCfg.topic.includes('ai')) {
-    // Also get AI data — subscribe to ai subtopics
-    const base = loginCfg.topic.replace('/#','');
-    mqtt.subscribe(base + '/+/+/ai/#', { qos: 0 });
+  const baseTopic = loginCfg.topic.replace('/#','');
+  mqtt.subscribe(baseTopic + '/+/+/ai/#', { qos: 0 });
+
+  if (loginCfg.clientFilter) {
+    // CLIENT MODE: show spinner and wait for device data to arrive
+    document.getElementById('waitLabel').textContent = 'Conectado — aguardando datos…';
+    document.getElementById('waitSub').textContent = loginCfg.label || loginCfg.clientFilter;
+    document.getElementById('waitTopic').textContent = loginCfg.topic;
+    showScreen('waiting');
+    waitForDeviceData();
+  } else {
+    // TECH MODE: show clients list
+    document.getElementById('bottomNav').classList.add('vis');
+    showScreen('clients');
+    refreshClientsList();
   }
+}
+
+function waitForDeviceData() {
+  let attempts = 0;
+  const interval = setInterval(() => {
+    attempts++;
+    const myDevs = Object.values(devices).filter(d =>
+      !loginCfg.clientFilter || d.client === loginCfg.clientFilter
+    );
+    if (myDevs.length > 0) {
+      clearInterval(interval);
+      document.getElementById('bottomNav').classList.add('vis');
+      if (myDevs.length === 1) {
+        const dev = myDevs[0];
+        openDevice(dev.ns + '/' + dev.client + '/' + dev.device);
+      } else {
+        openClient(loginCfg.clientFilter || myDevs[0].client);
+      }
+    } else if (attempts >= 30) {
+      clearInterval(interval);
+      document.getElementById('waitLabel').textContent = 'Sin respuesta del equipo';
+      document.getElementById('waitSub').textContent = 'Verificá que el equipo esté encendido';
+      document.getElementById('waitTopic').textContent = loginCfg.topic;
+      document.getElementById('bottomNav').classList.add('vis');
+    } else {
+      const d = '.'.repeat((attempts % 3) + 1);
+      document.getElementById('waitLabel').textContent = 'Aguardando datos' + d;
+    }
+  }, 500);
 }
 
 function onLost(resp) {
@@ -712,11 +764,19 @@ function onMsg(msg) {
 // ═══════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════
-function showScreen(name) {
+function showScreen(name, goBack) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  const el = document.getElementById('screen' + name.charAt(0).toUpperCase() + name.slice(1));
+  if (el) {
+    if (goBack) el.style.animation = 'screenBack .22s ease both';
+    else        el.style.animation = 'screenIn  .22s ease both';
+    el.classList.add('active');
+    // reset animation after it plays
+    setTimeout(() => { if (el) el.style.animation = ''; }, 300);
+  }
   const backBtn = document.getElementById('btnBack');
-  backBtn.classList.toggle('vis', name !== 'clients' && name !== 'alarms_view' && name !== 'config_view');
+  const noBack = ['clients','waiting','login'].includes(name);
+  backBtn.classList.toggle('vis', !noBack);
 }
 
 function navTo(tab) {
@@ -741,9 +801,16 @@ function goBack() {
   if (!active) return;
   const id = active.id;
   if (id === 'screenDashboard') {
-    currentDevKey = null; charts = {};
-    // Go back to devices of current client
-    renderDevicesScreen(currentClientFilter);
+    // Client mode with single device: no back, stay on dashboard
+    if (loginCfg && loginCfg.clientFilter) {
+      const myDevs = Object.values(devices).filter(d => d.client === loginCfg.clientFilter);
+      if (myDevs.length <= 1) return;
+      currentDevKey = null; charts = {};
+      renderDevicesScreen(loginCfg.clientFilter, true);
+    } else {
+      currentDevKey = null; charts = {};
+      renderDevicesScreen(currentClientFilter, true);
+    }
   } else if (id === 'screenDevices') {
     currentClientFilter = null;
     navTo('clients');
@@ -842,7 +909,7 @@ function refreshClientCard(clientId) {
 // ═══════════════════════════════════════════════════════════
 // DEVICES SCREEN
 // ═══════════════════════════════════════════════════════════
-function renderDevicesScreen(clientId) {
+function renderDevicesScreen(clientId, isBack) {
   const devList = Object.values(devices).filter(d => d.client === clientId);
   document.getElementById('devicesTitle').textContent = clientId.toUpperCase();
   const list = document.getElementById('devicesList');
@@ -871,7 +938,7 @@ function renderDevicesScreen(clientId) {
     list.appendChild(card);
   });
 
-  showScreen('devices');
+  showScreen('devices', isBack);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1265,7 +1332,8 @@ function doLogout() {
   document.getElementById('bottomNav').classList.remove('vis');
   document.getElementById('btnBack').classList.remove('vis');
   setConn('off', 'desconectado');
-  showScreen('login');
+  devices = {};
+  showScreen('login', true);
 }
 
 function copyText(txt) {
