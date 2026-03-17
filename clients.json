@@ -1,0 +1,29 @@
+{
+  "TECNICO": {
+    "host": "TU_BROKER.hivemq.cloud",
+    "port": 8884,
+    "user": "TU_USUARIO",
+    "pass": "TU_PASSWORD",
+    "topic": "agua/#",
+    "label": "Modo Técnico",
+    "techMode": true
+  },
+  "VACOTO25": {
+    "host": "TU_BROKER.hivemq.cloud",
+    "port": 8884,
+    "user": "TU_USUARIO",
+    "pass": "TU_PASSWORD",
+    "topic": "agua/vacoto/#",
+    "label": "Vacoto S.A.",
+    "clientFilter": "vacoto"
+  },
+  "ACME2025": {
+    "host": "TU_BROKER.hivemq.cloud",
+    "port": 8884,
+    "user": "TU_USUARIO",
+    "pass": "TU_PASSWORD",
+    "topic": "agua/acme/#",
+    "label": "ACME Industrias",
+    "clientFilter": "acme"
+  }
+}
