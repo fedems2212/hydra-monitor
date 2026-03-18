@@ -344,7 +344,7 @@ body::before {
 <body>
 
 <!-- ══ TOPBAR ══════════════════════════════════════════════ -->
-<div class="topbar">
+<div class="topbar" id="appTopbar" style="display:none">
   <div class="logo">HYDRA<em>/monitor</em></div>
   <button class="back-btn" id="btnBack" onclick="goBack()">← Volver</button>
   <div class="topbar-right">
@@ -355,10 +355,15 @@ body::before {
   </div>
 </div>
 
+<!-- LOGIN TOPBAR -->
+<div class="topbar" id="loginTopbar">
+  <div class="logo">HYDRA<em>/monitor</em></div>
+</div>
+
 <!-- ══ SCREENS ═════════════════════════════════════════════ -->
 
 <!-- LOGIN -->
-<div class="screen active" id="screenLogin">
+<div class="screen" id="screenLogin">
   <div class="login-card">
     <div class="login-logo">// HYDRA</div>
     <div class="login-sub">Monitor de equipos en tiempo real</div>
@@ -660,10 +665,24 @@ function showLoginErr(msg) {
 
 function onConnected() {
   setConn('on', 'conectado');
+
+  // ── Ocultar login completamente y resetear scroll ──────────
+  const loginScreen = document.getElementById('screenLogin');
+  const loginTopbar = document.getElementById('loginTopbar');
+  const appTopbar   = document.getElementById('appTopbar');
+  if (loginScreen) { loginScreen.classList.remove('active'); loginScreen.style.display = 'none'; }
+  if (loginTopbar) loginTopbar.style.display = 'none';
+  if (appTopbar)   appTopbar.style.display   = 'flex';
+  window.scrollTo(0, 0);
+
   // Subscribe to data topics
+  console.log('[Hydra] Subscribing to:', loginCfg.topic);
   mqtt.subscribe(loginCfg.topic, { qos: 1 });
   const baseTopic = loginCfg.topic.replace('/#','');
-  mqtt.subscribe(baseTopic + '/+/+/ai/#', { qos: 0 });
+  const aiTopic = baseTopic + '/+/+/ai/#';
+  console.log('[Hydra] Subscribing to AI:', aiTopic);
+  mqtt.subscribe(aiTopic, { qos: 0 });
+  console.log('[Hydra] clientFilter:', loginCfg.clientFilter || 'none (tech mode)');
 
   if (loginCfg.clientFilter) {
     // CLIENT MODE: show spinner and wait for device data to arrive
@@ -719,6 +738,13 @@ function onLost(resp) {
 function onMsg(msg) {
   const topic = msg.destinationName;
   const payload = msg.payloadString;
+  console.log('[MQTT]', topic, '=', payload.slice(0,60));
+  // Log parsed parts for first few messages
+  if (Object.keys(devices).length < 3) {
+    const _p = topic.split('/');
+    console.log('[MQTT parsed] ns:', _p[0], '| client:', _p[1], '| device:', _p[2], '| group:', _p[3]);
+  }
+
   const parts = topic.split('/');
   if (parts.length < 4) return;
 
@@ -728,8 +754,15 @@ function onMsg(msg) {
   // Skip engine HB
   if (client === 'ai' && device === 'engine') return;
 
-  // Client filter (client mode)
-  if (loginCfg.clientFilter && client !== loginCfg.clientFilter) return;
+  // Client filter (client mode) — case-insensitive match
+  if (loginCfg && loginCfg.clientFilter) {
+    const filter = loginCfg.clientFilter.toLowerCase().trim();
+    const incoming = client.toLowerCase().trim();
+    if (incoming !== filter) {
+      console.log('[MQTT] filtered:', incoming, '!== filter:', filter);
+      return;
+    }
+  }
 
   const devKey = `${ns}/${client}/${device}`;
   if (!devices[devKey]) devices[devKey] = makeDevice(ns, client, device);
@@ -790,15 +823,22 @@ function showScreen(name, goBack) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen' + name.charAt(0).toUpperCase() + name.slice(1));
   if (el) {
-    if (goBack) el.style.animation = 'screenBack .22s ease both';
-    else        el.style.animation = 'screenIn  .22s ease both';
+    el.style.animation = goBack ? 'screenBack .22s ease both' : 'screenIn .22s ease both';
     el.classList.add('active');
-    // reset animation after it plays
     setTimeout(() => { if (el) el.style.animation = ''; }, 300);
   }
-  const backBtn = document.getElementById('btnBack');
-  const noBack = ['clients','waiting','login'].includes(name);
-  backBtn.classList.toggle('vis', !noBack);
+  // Toggle login vs app chrome
+  const isLogin = (name === 'login');
+  const lt = document.getElementById('loginTopbar');
+  const at = document.getElementById('appTopbar');
+  const ls = document.getElementById('screenLogin');
+  if (lt) lt.style.display = isLogin ? 'flex' : 'none';
+  if (at) at.style.display = isLogin ? 'none'  : 'flex';
+  if (ls && !isLogin) ls.classList.remove('active');
+  // Back button visibility
+  document.getElementById('btnBack').classList.toggle('vis', !['clients','waiting'].includes(name));
+  // Bottom nav visibility
+  document.getElementById('bottomNav').classList.toggle('vis', !['login','waiting'].includes(name));
 }
 
 function navTo(tab) {
@@ -1355,7 +1395,15 @@ function doLogout() {
   document.getElementById('btnBack').classList.remove('vis');
   setConn('off', 'desconectado');
   devices = {};
+  // Restore login screen
+  const _ls = document.getElementById('screenLogin');
+  const _lt = document.getElementById('loginTopbar');
+  const _at = document.getElementById('appTopbar');
+  if (_ls) { _ls.style.display = ''; _ls.classList.remove('active'); }
+  if (_lt) _lt.style.display = 'flex';
+  if (_at) _at.style.display = 'none';
   showScreen('login', true);
+  window.scrollTo(0, 0);
 }
 
 function copyText(txt) {
@@ -1395,6 +1443,9 @@ function fmtTime(ts) {
 // ═══════════════════════════════════════════════════════════
 // URL CODE AUTO-LOGIN
 // ═══════════════════════════════════════════════════════════
+// Show login screen on load
+showScreen('login');
+
 // Auto-login from URL ?code=XXXXX
 const urlCode = new URLSearchParams(location.search).get('code');
 if (urlCode) {
