@@ -616,17 +616,22 @@ async function doLogin() {
   setConn('ing', 'conectando…');
 
   const clientId = 'hydra_' + Math.random().toString(36).substr(2,8);
-  mqtt = new Paho.Client(cfg.host, cfg.port, clientId);
+  // Paho 1.1: Client(host, port, path, clientId) — path '/mqtt' is required for HiveMQ WebSocket
+  mqtt = new Paho.Client(cfg.host, Number(cfg.port), '/mqtt', clientId);
   mqtt.onConnectionLost = onLost;
   mqtt.onMessageArrived = onMsg;
 
   mqtt.connect({
-    useSSL: true, userName: cfg.user, password: cfg.pass,
-    keepAliveInterval: 30, cleanSession: true,
+    useSSL: true,
+    userName: cfg.user,
+    password: cfg.pass,
+    keepAliveInterval: 30,
+    cleanSession: true,
+    reconnect: true,
     onSuccess: onConnected,
     onFailure: (e) => {
       setConn('off', 'desconectado');
-      showLoginErr('Error de conexión: ' + (e.errorMessage || 'Sin respuesta del broker'));
+      showLoginErr('Error de conexión: ' + (e.errorMessage || 'AMQJS0007E — verificá host, puerto y credenciales'));
     }
   });
 }
