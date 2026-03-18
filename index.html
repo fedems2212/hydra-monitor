@@ -801,33 +801,12 @@ function onConnected() {
 function startClientListRefresh() {
   activeNav = 'clients';
   refreshClientsList();
-
-  // Debug counter visible on screen
-  let msgCount = 0;
-  const dbg = document.createElement('div');
-  dbg.id = 'dbgPanel';
-  dbg.style.cssText = 'position:fixed;bottom:90px;left:10px;right:10px;background:rgba(0,0,0,.85);border:1px solid #00d4ff;border-radius:8px;padding:8px 12px;font-size:11px;font-family:monospace;color:#00d4ff;z-index:999;max-height:120px;overflow:hidden';
-  dbg.innerHTML = 'Tech mode — aguardando mensajes MQTT...';
-  document.body.appendChild(dbg);
-
-  // Update debug panel on each message
-  const origOnMsg = window._dbgMsgHook;
-  window._dbgMsgCount = 0;
-
   let last = 0;
   const iv = setInterval(() => {
-    if (activeNav !== 'clients') {
-      clearInterval(iv);
-      const p = document.getElementById('dbgPanel');
-      if (p) p.remove();
-      return;
-    }
+    if (activeNav !== 'clients') { clearInterval(iv); return; }
     const n = Object.keys(devices).length;
-    const keys = Object.keys(devices);
-    dbg.innerHTML = `msgs: ${window._dbgMsgCount || 0} | devices: ${n}<br>${keys.slice(0,4).join('<br>')}`;
     if (n !== last) { last = n; refreshClientsList(); }
   }, 300);
-
   const iv2 = setInterval(() => {
     if (activeNav !== 'clients') { clearInterval(iv2); return; }
     refreshClientsList();
@@ -877,7 +856,6 @@ function onLost(resp) {
 // MESSAGE HANDLER
 // ═══════════════════════════════════════════════════════════
 function onMsg(msg) {
-  window._dbgMsgCount = (window._dbgMsgCount || 0) + 1;
   const topic = msg.destinationName;
   const payload = msg.payloadString;
   console.log('[MQTT]', topic, '=', payload.slice(0,60));
