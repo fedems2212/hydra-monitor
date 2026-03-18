@@ -540,64 +540,97 @@ async function loadClientCodes() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// TOPIC LABELS (from the official guide)
+// TOPIC LABELS — structure matches official guide sections
 // ═══════════════════════════════════════════════════════════
-const LABELS = {
-  'stat/run':           { label:'Produciendo',      type:'digital' },
-  'stat/status':        { label:'Estado',            type:'text' },
-  'stat/mode':          { label:'Modo',              type:'text' },
-  'stat/enabled':       { label:'Habilitado',        type:'digital' },
-  'stat/locked':        { label:'Bloqueado',         type:'digital', invert:true },
-  'stat/retries':       { label:'Reintentos',        type:'number', group:'estado' },
-  'stat/uptime_s':      { label:'Uptime',            type:'uptime', hide:true },
-  'stat/rssi_dbm':      { label:'WiFi',              type:'rssi', hide:true },
-  'stat/fw_version':    { label:'Firmware',          type:'text', hide:true },
-  'stat/hb':            { label:'HB',                type:'counter', hide:true },
-  // Entradas digitales
-  'tele/cistern_ok':       { label:'Cisterna',          type:'digital', group:'E' },
-  'tele/tank_demand':      { label:'Demanda tanque',    type:'digital', group:'E' },
-  'tele/pressure_ok':      { label:'Presión OK',        type:'digital', group:'E' },
-  'tele/high_pressure_ok': { label:'P.alta OK',         type:'digital', group:'E' },
-  'tele/leak_ok':          { label:'Sin pérdida',       type:'digital', group:'E' },
-  'tele/door_ok':          { label:'Puerta OK',         type:'digital', group:'E' },
-  // Salidas digitales
-  'tele/bomba_baja':       { label:'Bomba baja',        type:'digital', group:'S' },
-  'tele/bomba_alta':       { label:'Bomba alta',        type:'digital', group:'S' },
-  'tele/flush_valve':      { label:'Válvula flush',     type:'digital', group:'S' },
-  // Caudales
-  'tele/flow_perm_lpm':    { label:'Caudal perm.',      type:'analog', unit:'L/min', chart:true, group:'proceso' },
-  'tele/flow_rej_lpm':     { label:'Caudal rechazo',    type:'analog', unit:'L/min', chart:true, group:'proceso' },
-  'tele/flow_feed_lpm':    { label:'Caudal entrada',    type:'analog', unit:'L/min', chart:true, group:'proceso' },
-  'tele/total_liters':     { label:'Total litros',      type:'analog', unit:'L',    chart:true, group:'proceso' },
-  'tele/total_m3':         { label:'Total m³',          type:'analog', unit:'m³', chart:true, group:'proceso' },
-  'tele/recovery_pct':     { label:'Recuperación',      type:'analog', unit:'%',  chart:true, group:'proceso' },
-  // Presiones
-  'tele/p_feed_bar':       { label:'P. entrada',        type:'analog', unit:'bar',   chart:true, group:'presiones' },
-  'tele/p_high_bar':       { label:'P. alta',           type:'analog', unit:'bar',   chart:true, group:'presiones' },
-  'tele/p_perm_bar':       { label:'P. permeado',       type:'analog', unit:'bar',   chart:true, group:'presiones' },
-  'tele/dp_prefilter_bar': { label:'ΔP prefiltro',      type:'analog', unit:'bar',   chart:true, group:'presiones' },
-  'tele/dp_membrane_bar':  { label:'ΔP membrana',       type:'analog', unit:'bar',   chart:true, group:'presiones' },
-  // Calidad
-  'tele/cond_feed_us':     { label:'Cond. entrada',     type:'analog', unit:'µS/cm', chart:true, group:'calidad' },
-  'tele/cond_perm_us':     { label:'Cond. permeado',    type:'analog', unit:'µS/cm', chart:true, group:'calidad' },
-  'tele/tds_feed_ppm':     { label:'TDS entrada',       type:'analog', unit:'ppm',   chart:true, group:'calidad' },
-  'tele/tds_perm_ppm':     { label:'TDS permeado',      type:'analog', unit:'ppm',   chart:true, group:'calidad' },
-  'tele/temp_c':           { label:'Temperatura',       type:'analog', unit:'°C',   chart:true, group:'calidad' },
-  'tele/ph':               { label:'pH',                type:'analog', unit:'',     chart:true, group:'calidad' },
-  'tele/orp_mv':           { label:'ORP',               type:'analog', unit:'mV',   chart:true, group:'calidad' },
-  // Contadores
-  'tele/pump_hours_low':         { label:'Hrs bomba baja',       type:'analog', unit:'h',   chart:true, group:'contadores' },
-  'tele/pump_hours_high':        { label:'Hrs bomba alta',       type:'analog', unit:'h',   chart:true, group:'contadores' },
-  'tele/starts_count':           { label:'Arranques',            type:'analog', unit:'',    chart:true, group:'contadores' },
-  'tele/flush_count':            { label:'Flushes',              type:'analog', unit:'',    chart:true, group:'contadores' },
-  'tele/service_hours_remaining':{ label:'Servicio restante',    type:'analog', unit:'h',   chart:true, group:'contadores' },
-};
 
-const ALARM_LABELS = {
-  'offline':'Sin comunicación','low_pressure':'Presión baja','high_pressure':'Presión alta',
-  'no_water_cistern':'Sin agua cisterna','low_flow':'Caudal bajo','leak':'Pérdida detectada',
-  'service_due':'Servicio requerido','membrane_fouling':'Membrana sucia',
-};
+// SECTIONS define the fixed dashboard layout per the guide.
+// Every variable listed here will appear in the dashboard —
+// with its value if received, dimmed/empty if not yet received.
+const SECTIONS = [
+  {
+    key: 'estado', label: 'Estado del equipo',
+    vars: [
+      { k:'stat/run',        label:'Produciendo',   type:'digital' },
+      { k:'stat/status',     label:'Estado',        type:'text' },
+      { k:'stat/mode',       label:'Modo',          type:'text' },
+      { k:'stat/enabled',    label:'Habilitado',    type:'digital' },
+      { k:'stat/locked',     label:'Bloqueado',     type:'digital', invert:true },
+      { k:'stat/retries',    label:'Reintentos',    type:'number' },
+    ]
+  },
+  {
+    key: 'entradas', label: 'Entradas digitales',
+    vars: [
+      { k:'tele/cistern_ok',        label:'Cisterna',       type:'digital' },
+      { k:'tele/tank_demand',       label:'Demanda tanque', type:'digital' },
+      { k:'tele/pressure_ok',       label:'Presión OK',     type:'digital' },
+      { k:'tele/high_pressure_ok',  label:'P. alta OK',     type:'digital' },
+      { k:'tele/leak_ok',           label:'Sin pérdida',    type:'digital' },
+      { k:'tele/door_ok',           label:'Puerta OK',      type:'digital' },
+    ]
+  },
+  {
+    key: 'salidas', label: 'Salidas digitales',
+    vars: [
+      { k:'tele/bomba_baja',    label:'Bomba baja',     type:'digital' },
+      { k:'tele/bomba_alta',    label:'Bomba alta',     type:'digital' },
+      { k:'tele/flush_valve',   label:'Válvula flush',  type:'digital' },
+    ]
+  },
+  {
+    key: 'proceso', label: 'Proceso / Caudales',
+    vars: [
+      { k:'tele/flow_perm_lpm',  label:'Caudal permeado',  type:'analog', unit:'L/min', chart:true },
+      { k:'tele/flow_rej_lpm',   label:'Caudal rechazo',   type:'analog', unit:'L/min', chart:true },
+      { k:'tele/flow_feed_lpm',  label:'Caudal entrada',   type:'analog', unit:'L/min', chart:true },
+      { k:'tele/total_liters',   label:'Total litros',     type:'analog', unit:'L',     chart:true },
+      { k:'tele/total_m3',       label:'Total m³',         type:'analog', unit:'m³',   chart:true },
+      { k:'tele/recovery_pct',   label:'Recuperación',     type:'analog', unit:'%',     chart:true },
+    ]
+  },
+  {
+    key: 'presiones', label: 'Presiones',
+    vars: [
+      { k:'tele/p_feed_bar',       label:'P. entrada',    type:'analog', unit:'bar', chart:true },
+      { k:'tele/p_high_bar',       label:'P. alta',       type:'analog', unit:'bar', chart:true },
+      { k:'tele/p_perm_bar',       label:'P. permeado',   type:'analog', unit:'bar', chart:true },
+      { k:'tele/dp_prefilter_bar', label:'ΔP prefiltro',  type:'analog', unit:'bar', chart:true },
+      { k:'tele/dp_membrane_bar',  label:'ΔP membrana',   type:'analog', unit:'bar', chart:true },
+    ]
+  },
+  {
+    key: 'calidad', label: 'Calidad del agua',
+    vars: [
+      { k:'tele/cond_feed_us',   label:'Cond. entrada',     type:'analog', unit:'µS/cm', chart:true },
+      { k:'tele/cond_perm_us',   label:'Cond. permeado',    type:'analog', unit:'µS/cm', chart:true },
+      { k:'tele/tds_feed_ppm',   label:'TDS entrada',       type:'analog', unit:'ppm',   chart:true },
+      { k:'tele/tds_perm_ppm',   label:'TDS permeado',      type:'analog', unit:'ppm',   chart:true },
+      { k:'tele/temp_c',         label:'Temperatura',       type:'analog', unit:'°C',    chart:true },
+      { k:'tele/ph',             label:'pH',                type:'analog', unit:'',      chart:true },
+      { k:'tele/orp_mv',         label:'ORP',               type:'analog', unit:'mV',    chart:true },
+    ]
+  },
+  {
+    key: 'contadores', label: 'Contadores',
+    vars: [
+      { k:'tele/pump_hours_low',          label:'Hrs bomba baja',      type:'analog', unit:'h', chart:true },
+      { k:'tele/pump_hours_high',         label:'Hrs bomba alta',      type:'analog', unit:'h', chart:true },
+      { k:'tele/starts_count',            label:'Arranques',           type:'analog', unit:'',  chart:true },
+      { k:'tele/flush_count',             label:'Flushes',             type:'analog', unit:'',  chart:true },
+      { k:'tele/service_hours_remaining', label:'Servicio restante',   type:'analog', unit:'h', chart:true },
+    ]
+  },
+];
+
+// Flat LABELS map for quick lookup (used by other parts of the code)
+const LABELS = {};
+SECTIONS.forEach(sec => {
+  sec.vars.forEach(v => {
+    LABELS[v.k] = { ...v, group: sec.key };
+  });
+});
+
+// Alarm labels
 
 // CHART COLORS per variable
 const CHART_COLORS = {
@@ -1126,40 +1159,50 @@ function buildDashHTML(dev, devKey) {
   }
 
   // Digital I/O tiles
-  const digitalInputs  = buildTiles(dev, t => t.group === 'E');
-  const digitalOutputs = buildTiles(dev, t => t.group === 'S');
-  const statTiles      = buildTiles(dev, t => !t.group && (t.type === 'digital' || t.type === 'text' || t.type === 'number') && !t.hide);
+  // ── Render each section from the guide ──────────────────────────
+  SECTIONS.forEach(sec => {
+    // Get all vars for this section, with value (or undefined if not yet received)
+    const items = sec.vars.map(v => ({
+      key: v.k, val: dev.last[v.k], cfg: v
+    }));
 
-  if (digitalInputs.length > 0) {
-    html += `<div class="sec-hdr">Entradas digitales</div><div class="tiles">` + digitalInputs.map(renderTile).join('') + `</div>`;
-  }
-  if (digitalOutputs.length > 0) {
-    html += `<div class="sec-hdr">Salidas digitales</div><div class="tiles">` + digitalOutputs.map(renderTile).join('') + `</div>`;
-  }
-  if (statTiles.length > 0) {
-    html += `<div class="sec-hdr">Estado</div><div class="tiles">` + statTiles.map(renderTile).join('') + `</div>`;
-  }
+    // Only show section if at least one var has been received
+    const hasAny = items.some(item => item.val !== undefined);
+    if (!hasAny) return;
 
-  // Analog tiles grouped by group
-  const groups = { proceso:'Proceso', presiones:'Presiones', calidad:'Calidad del agua', contadores:'Contadores' };
-  Object.entries(groups).forEach(([grpKey, grpLabel]) => {
-    const tiles = buildTiles(dev, t => t.group === grpKey);
-    // only show tiles that have data
-    const withData = tiles.filter(t => t.val !== undefined);
-    if (withData.length === 0) return;
-    html += `<div class="sec-hdr">${grpLabel}</div><div class="tiles">` + withData.map(renderTile).join('') + `</div>`;
+    html += `<div class="sec-hdr">${sec.label}</div><div class="tiles">`;
+    items.forEach(item => {
+      html += renderTile(item);
+    });
+    html += `</div>`;
   });
 
-  // Catch-all: analog vars with data but no group assigned
-  const assignedGroups = new Set(['E','S','proceso','presiones','calidad','contadores']);
-  const ungrouped = buildTiles(dev, t =>
-    !assignedGroups.has(t.group) && t.type === 'analog' && !t.hide
-  ).filter(t => t.val !== undefined);
-  if (ungrouped.length > 0) {
-    html += `<div class="sec-hdr">Otros</div><div class="tiles">` + ungrouped.map(renderTile).join('') + `</div>`;
+  // ── Unknown vars received from device not in guide ──────────────
+  const knownKeys = new Set(Object.keys(LABELS));
+  const unknownAnalog = Object.keys(dev.last).filter(k =>
+    !knownKeys.has(k) &&
+    (k.startsWith('tele/') || k.startsWith('stat/')) &&
+    !k.includes('hb') && !k.includes('state_code') && !k.includes('params')
+  );
+  if (unknownAnalog.length > 0) {
+    html += `<div class="sec-hdr">Otros (no catalogados)</div><div class="tiles">`;
+    unknownAnalog.forEach(k => {
+      const val = dev.last[k];
+      const num = parseFloat(val);
+      html += renderTile({
+        key: k,
+        val: val,
+        cfg: {
+          label: k.split('/').pop().replace(/_/g,' '),
+          type: (!isNaN(num) && val !== '' && val !== null) ? 'analog' : 'text',
+          unit: ''
+        }
+      });
+    });
+    html += `</div>`;
   }
 
-  // Charts for analog vars that have history
+    // Charts for analog vars that have history
   const chartVars = Object.keys(dev.history).filter(k => dev.history[k].length > 1);
   if (chartVars.length > 0) {
     html += `<div class="sec-hdr">Gráficos (última hora)</div>`;
@@ -1361,52 +1404,63 @@ function buildDashHTML(dev, devKey) {
 }
 
 function buildTiles(dev, filterFn) {
+  // Legacy helper — still used by partialUpdateTile
   return Object.entries(LABELS)
     .filter(([k, cfg]) => !cfg.hide && filterFn(cfg))
-    .map(([k, cfg]) => {
-      let val = dev.last[k];
-      if (val === undefined) return null;
-      return { key: k, val, cfg };
-    })
-    .filter(Boolean);
+    .map(([k, cfg]) => ({ key: k, val: dev.last[k], cfg }));
 }
 
 function renderTile(t) {
   const { key, val, cfg } = t;
+  const safeKey = key.replace(/\//g,'_');
+  const hasVal  = val !== undefined && val !== null && val !== '';
+
+  // ── DIMMED tile: variable known but no data yet ──
+  if (!hasVal) {
+    const isDig = cfg.type === 'digital';
+    return `<div class="tile t-off" id="tile_${safeKey}" style="opacity:.35">
+      <div class="tile-label">${cfg.label}</div>
+      ${isDig
+        ? `<div class="dig-row"><div class="dig-led" style="background:var(--border2)"></div><div class="dig-label off">—</div></div>`
+        : `<div class="tile-val" style="font-size:15px;color:var(--text3)">—<span class="tile-unit">${cfg.unit||''}</span></div>`
+      }
+    </div>`;
+  }
+
   let cls = 'tile';
   let inner = '';
 
   if (cfg.type === 'digital') {
-    const isOn = (val == 1 || val === true || val === 'true');
-    const isAlarm = cfg.invert ? isOn : false; // locked = alarm when on
+    const isOn    = (val == 1 || val === true || val === 'true');
+    const isAlarm = cfg.invert ? isOn : false;
     cls += isAlarm ? ' t-alarm' : (isOn ? ' t-on' : ' t-off');
-    const ledClass = isAlarm ? 'led-alarm' : (isOn ? 'led-on' : 'led-off');
-    const lblClass = isAlarm ? 'alarm' : (isOn ? 'on' : 'off');
-    const text = isOn ? 'ON' : 'OFF';
-    inner = `<div class="tile-label" id="tl_${key.replace(/\//g,'_')}">${cfg.label}</div>
+    const ledCls = isAlarm ? 'led-alarm' : (isOn ? 'led-on' : 'led-off');
+    const lblCls = isAlarm ? 'alarm' : (isOn ? 'on' : 'off');
+    inner = `<div class="tile-label">${cfg.label}</div>
       <div class="dig-row">
-        <div class="dig-led ${ledClass}" id="led_${key.replace(/\//g,'_')}"></div>
-        <div class="dig-label ${lblClass}" id="dv_${key.replace(/\//g,'_')}">${text}</div>
+        <div class="dig-led ${ledCls}" id="led_${safeKey}"></div>
+        <div class="dig-label ${lblCls}" id="dv_${safeKey}">${isOn ? 'ON' : 'OFF'}</div>
       </div>`;
+
   } else if (cfg.type === 'analog') {
     const num = parseFloat(val);
-    const fmt = isNaN(num) ? val : (num < 10 ? num.toFixed(2) : num.toFixed(1));
+    const fmt = isNaN(num) ? String(val) : (num < 10 ? num.toFixed(2) : num.toFixed(1));
     cls += ' t-analog';
     inner = `<div class="tile-label">${cfg.label}</div>
-      <div class="tile-val big" id="av_${key.replace(/\//g,'_')}">
-        ${fmt}<span class="tile-unit">${cfg.unit||''}</span>
-      </div>`;
+      <div class="tile-val big" id="av_${safeKey}">${fmt}<span class="tile-unit">${cfg.unit||''}</span></div>`;
+
   } else if (cfg.type === 'number') {
     cls += ' t-text';
     inner = `<div class="tile-label">${cfg.label}</div>
-      <div class="tile-val" id="av_${key.replace(/\//g,'_')}">${val}</div>`;
-  } else if (cfg.type === 'text') {
+      <div class="tile-val" id="av_${safeKey}">${val}</div>`;
+
+  } else {
     cls += ' t-text';
     inner = `<div class="tile-label">${cfg.label}</div>
-      <div class="tile-val" style="font-size:13px" id="av_${key.replace(/\//g,'_')}">${val}</div>`;
+      <div class="tile-val" style="font-size:13px" id="av_${safeKey}">${val}</div>`;
   }
 
-  return `<div class="${cls}" id="tile_${key.replace(/\//g,'_')}">${inner}</div>`;
+  return `<div class="${cls}" id="tile_${safeKey}">${inner}</div>`;
 }
 
 function partialUpdateTile(fullKey, val) {
