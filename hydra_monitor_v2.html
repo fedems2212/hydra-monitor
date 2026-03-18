@@ -616,10 +616,21 @@ async function doLogin() {
   setConn('ing', 'conectando…');
 
   const clientId = 'hydra_' + Math.random().toString(36).substr(2,8);
-  // Paho 1.1: Client(host, port, path, clientId) — path '/mqtt' is required for HiveMQ WebSocket
-  mqtt = new Paho.Client(cfg.host, Number(cfg.port), '/mqtt', clientId);
+  // Build WebSocket URL explicitly to avoid Paho path issues
+  // Always use 8884 for WebSocket (8883 = raw MQTT only, doesn't work in browser)
+  const wsPort = 8884;
+  const wsUrl = 'wss://' + cfg.host + ':' + wsPort + '/mqtt';
+  console.log('[Hydra] Connecting to:', wsUrl, 'user:', cfg.user);
+  mqtt = new Paho.Client(cfg.host, wsPort, '/mqtt', clientId);
   mqtt.onConnectionLost = onLost;
   mqtt.onMessageArrived = onMsg;
+
+  // Test raw WebSocket first to diagnose
+  try {
+    const testWs = new WebSocket(wsUrl);
+    testWs.onopen  = () => { console.log('[Hydra] Raw WebSocket OK'); testWs.close(); };
+    testWs.onerror = (e) => { console.error('[Hydra] Raw WebSocket FAILED:', e); };
+  } catch(e) { console.error('[Hydra] WebSocket constructor error:', e); }
 
   mqtt.connect({
     useSSL: true,
@@ -627,11 +638,11 @@ async function doLogin() {
     password: cfg.pass,
     keepAliveInterval: 30,
     cleanSession: true,
-    reconnect: true,
     onSuccess: onConnected,
     onFailure: (e) => {
       setConn('off', 'desconectado');
-      showLoginErr('Error de conexión: ' + (e.errorMessage || 'AMQJS0007E — verificá host, puerto y credenciales'));
+      console.error('[Hydra] MQTT connect failed:', e);
+      showLoginErr('Error: ' + (e.errorMessage || 'Sin respuesta') + ' | URL: ' + wsUrl);
     }
   });
 }
