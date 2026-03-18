@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#080d1a">
-<title>Hydra Monitor</title>
+<title>Hydra Monitor v2.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
@@ -411,7 +411,7 @@ body::before {
 <!-- LOGIN -->
 <div class="screen" id="screenLogin">
   <div class="login-card">
-    <div class="login-logo">// HYDRA.</div>
+    <div class="login-logo">// HYDRA</div>
     <div class="login-sub">Monitor de equipos en tiempo real</div>
 
     <!-- CLIENT MODE (default) -->
@@ -437,7 +437,8 @@ body::before {
       <div class="field">
         <label>Equipo (namespace/client/device)</label>
         <input id="tTopic" placeholder="agua/vacoto/rom_base_01"
-               style="font-family:var(--mono);font-size:13px">
+               style="font-family:var(--mono);font-size:13px"
+               oninput="localStorage.setItem('hydra_last_path',this.value)">
         <div style="font-size:10px;color:var(--text3);margin-top:4px">
           Ingresá el path completo del equipo
         </div>
