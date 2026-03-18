@@ -799,20 +799,39 @@ function onConnected() {
 }
 
 function startClientListRefresh() {
-  // Refresh client list as MQTT messages arrive — stop after 30s or when stable
-  let ticks = 0;
-  let lastCount = 0;
+  activeNav = 'clients';
   refreshClientsList();
+
+  // Debug counter visible on screen
+  let msgCount = 0;
+  const dbg = document.createElement('div');
+  dbg.id = 'dbgPanel';
+  dbg.style.cssText = 'position:fixed;bottom:90px;left:10px;right:10px;background:rgba(0,0,0,.85);border:1px solid #00d4ff;border-radius:8px;padding:8px 12px;font-size:11px;font-family:monospace;color:#00d4ff;z-index:999;max-height:120px;overflow:hidden';
+  dbg.innerHTML = 'Tech mode — aguardando mensajes MQTT...';
+  document.body.appendChild(dbg);
+
+  // Update debug panel on each message
+  const origOnMsg = window._dbgMsgHook;
+  window._dbgMsgCount = 0;
+
+  let last = 0;
   const iv = setInterval(() => {
-    ticks++;
-    const count = Object.keys(devices).length;
-    refreshClientsList();
-    if (count === lastCount && ticks > 6) {
-      clearInterval(iv); // stable — stop refreshing
+    if (activeNav !== 'clients') {
+      clearInterval(iv);
+      const p = document.getElementById('dbgPanel');
+      if (p) p.remove();
+      return;
     }
-    lastCount = count;
-    if (ticks >= 60) clearInterval(iv); // hard stop at 30s
-  }, 500);
+    const n = Object.keys(devices).length;
+    const keys = Object.keys(devices);
+    dbg.innerHTML = `msgs: ${window._dbgMsgCount || 0} | devices: ${n}<br>${keys.slice(0,4).join('<br>')}`;
+    if (n !== last) { last = n; refreshClientsList(); }
+  }, 300);
+
+  const iv2 = setInterval(() => {
+    if (activeNav !== 'clients') { clearInterval(iv2); return; }
+    refreshClientsList();
+  }, 1000);
 }
 
 function waitForDeviceData() {
@@ -858,6 +877,7 @@ function onLost(resp) {
 // MESSAGE HANDLER
 // ═══════════════════════════════════════════════════════════
 function onMsg(msg) {
+  window._dbgMsgCount = (window._dbgMsgCount || 0) + 1;
   const topic = msg.destinationName;
   const payload = msg.payloadString;
   console.log('[MQTT]', topic, '=', payload.slice(0,60));
@@ -949,16 +969,15 @@ function onMsg(msg) {
     // Update tile in open dashboard (fast, no re-render)
     if (currentDevKey === devKey) partialUpdateTile(fullKey, val);
 
-    // Update client card if in clients view
-    if (activeNav === 'clients') {
-      const now = Date.now();
-      if (!dev._lastCardUpdate || now - dev._lastCardUpdate > 1000) {
-        dev._lastCardUpdate = now;
-        if (loginCfg && loginCfg.techMode && !loginCfg.clientFilter) {
-          refreshClientsList(); // tech mode: rebuild full list
-        } else {
-          refreshClientCard(client);
-        }
+    // Update UI
+    const now = Date.now();
+    if (!dev._lastCardUpdate || now - dev._lastCardUpdate > 500) {
+      dev._lastCardUpdate = now;
+      if (loginCfg && loginCfg.techMode && !loginCfg.clientFilter) {
+        // Tech mode: always update client list when new data arrives
+        if (activeNav === 'clients') refreshClientsList();
+      } else if (activeNav === 'clients') {
+        refreshClientCard(client);
       }
     }
   }
