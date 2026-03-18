@@ -770,6 +770,7 @@ function showLoginErr(msg) {
 
 function onConnected() {
   setConn('on', 'conectado');
+  console.log('[onConnected] clientFilter:', loginCfg.clientFilter, '| deviceFilter:', loginCfg.deviceFilter, '| topic:', loginCfg.topic);
 
   // ── Ocultar login completamente y resetear scroll ──────────
   const loginScreen = document.getElementById('screenLogin');
@@ -813,8 +814,10 @@ function waitForDeviceData() {
       const df = loginCfg.deviceFilter;
       const clientOk = !cf || d.client.toLowerCase() === cf.toLowerCase();
       const deviceOk = !df || d.device.toLowerCase() === df.toLowerCase();
+      if (!clientOk || !deviceOk) console.log('[waitFor] skip:', d.client, d.device, '| filter:', cf, df);
       return clientOk && deviceOk;
     });
+    if (attempts === 1) console.log('[waitFor] devices so far:', Object.keys(devices));
     if (myDevs.length > 0) {
       clearInterval(interval);
       document.getElementById('bottomNav').classList.add('vis');
@@ -874,7 +877,10 @@ function onMsg(msg) {
   }
 
   const devKey = `${ns}/${client}/${device}`;
-  if (!devices[devKey]) devices[devKey] = makeDevice(ns, client, device);
+  if (!devices[devKey]) {
+    devices[devKey] = makeDevice(ns, client, device);
+    console.log('[onMsg] new device:', devKey, '| clientFilter:', loginCfg && loginCfg.clientFilter);
+  }
   const dev = devices[devKey];
   dev.lastSeen = Date.now();
 
