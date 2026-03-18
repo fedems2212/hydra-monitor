@@ -1093,10 +1093,17 @@ function buildDashHTML(dev, devKey) {
   let html = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <span class="state-badge ${stateClass}" style="font-size:11px;padding:5px 12px">${state}</span>
-      <div>
+      <div style="flex:1;min-width:0">
         <div style="font-size:16px;font-weight:700">${dev.device}</div>
         <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${dev.ns}/${dev.client}</div>
       </div>
+      <button onclick="requestDiagnosis('${devKey}')"
+        style="background:rgba(0,136,204,.15);border:1px solid rgba(0,136,204,.3);
+               border-radius:8px;color:var(--accent);font-size:11px;font-weight:600;
+               padding:7px 12px;cursor:pointer;flex-shrink:0;white-space:nowrap"
+        id="diagBtn_${devKey.replace(/\//g,'_')}">
+        🔍 Diagnosticar
+      </button>
     </div>
     ${statsBar}`;
 
@@ -1589,6 +1596,33 @@ function getStateClass(state) {
   const map = { 'RUNNING':'s-RUNNING','IDLE':'s-IDLE','STARTING':'s-STARTING',
     'OFFLINE':'s-OFFLINE','LEARNING':'s-LEARNING','WAIT_CISTERN':'s-WAIT_CISTERN' };
   return map[s] || 's-default';
+}
+
+function requestDiagnosis(devKey) {
+  if (!mqtt || !mqtt.isConnected()) {
+    alert('Sin conexión al broker');
+    return;
+  }
+  const dev = devices[devKey];
+  if (!dev) return;
+
+  // Show loading state on button
+  const btn = document.getElementById('diagBtn_' + devKey.replace(/\//g,'_'));
+  if (btn) {
+    btn.textContent = '⏳ Solicitando…';
+    btn.disabled = true;
+    setTimeout(() => {
+      if (btn) { btn.textContent = '🔍 Diagnosticar'; btn.disabled = false; }
+    }, 8000);
+  }
+
+  // Publish cmd/report to the device topic — IA will respond with ai/report
+  const topic = dev.ns + '/' + dev.client + '/' + dev.device + '/cmd/report';
+  const payload = JSON.stringify({
+    sections: { production: 1, alarms: 1, timeline: 0, diagnosis: 1 }
+  });
+  mqtt.publish(topic, payload, 1, false);
+  console.log('[PWA] Diagnosis requested:', topic);
 }
 
 function fmtUptime(s) {
