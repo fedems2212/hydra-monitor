@@ -435,8 +435,13 @@ body::before {
         <div class="field"><label>Contraseña</label><input id="tPass" type="password" placeholder="••••"></div>
       </div>
       <div class="field">
-        <label>Topic wildcard</label>
-        <input id="tTopic" value="agua/#">
+        <label>Namespace / Client ID / Device ID</label>
+        <input id="tTopic" placeholder="agua/vacoto/rom_base_01"
+               style="font-family:var(--mono);font-size:13px"
+               oninput="this.value=this.value.toLowerCase().trim()">
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">
+          Formato: <span style="font-family:var(--mono);color:var(--text2)">namespace/client/device</span>
+        </div>
       </div>
     </div>
 
@@ -690,14 +695,24 @@ async function doLogin() {
     cfg = CLIENT_CODES[code];
     if (!cfg) { showLoginErr('Código inválido — verificá el código con tu proveedor'); return; }
   } else {
+    const rawTopic = document.getElementById('tTopic').value.trim().replace(/\/+$/,'');
+    const topicParts = rawTopic.split('/').filter(Boolean);
+    if (topicParts.length < 3) {
+      showLoginErr('Ingresá el path completo: namespace/client/device');
+      return;
+    }
+    const [tNs, tClient, tDevice] = topicParts;
     cfg = {
       host: document.getElementById('tHost').value.trim(),
       port: parseInt(document.getElementById('tPort').value) || 8884,
       user: document.getElementById('tUser').value.trim(),
       pass: document.getElementById('tPass').value,
-      topic: document.getElementById('tTopic').value.trim() || 'agua/#',
+      topic: `${tNs}/${tClient}/${tDevice}/#`,
+      clientFilter: tClient,
+      deviceFilter: tDevice,
+      nsFilter: tNs,
       techMode: true,
-      label: 'Modo Técnico',
+      label: `${tClient} / ${tDevice}`,
     };
     if (!cfg.host) { showLoginErr('Ingresá el host del broker'); return; }
   }
@@ -764,14 +779,14 @@ function onConnected() {
   console.log('[Hydra] clientFilter:', loginCfg.clientFilter || 'none (tech mode)');
 
   if (loginCfg.clientFilter) {
-    // CLIENT MODE: show spinner and wait for device data to arrive
+    // CLIENT or TECH with specific device: show spinner and wait for data
     document.getElementById('waitLabel').textContent = 'Conectado — aguardando datos…';
     document.getElementById('waitSub').textContent = loginCfg.label || loginCfg.clientFilter;
     document.getElementById('waitTopic').textContent = loginCfg.topic;
     showScreen('waiting');
     waitForDeviceData();
   } else {
-    // TECH MODE: show clients list
+    // Should not happen anymore, but fallback to clients list
     document.getElementById('bottomNav').classList.add('vis');
     showScreen('clients');
     refreshClientsList();
@@ -782,9 +797,11 @@ function waitForDeviceData() {
   let attempts = 0;
   const interval = setInterval(() => {
     attempts++;
-    const myDevs = Object.values(devices).filter(d =>
-      !loginCfg.clientFilter || d.client === loginCfg.clientFilter
-    );
+    const myDevs = Object.values(devices).filter(d => {
+      const clientOk = !loginCfg.clientFilter || d.client.toLowerCase() === loginCfg.clientFilter.toLowerCase();
+      const deviceOk = !loginCfg.deviceFilter || d.device.toLowerCase() === loginCfg.deviceFilter.toLowerCase();
+      return clientOk && deviceOk;
+    });
     if (myDevs.length > 0) {
       clearInterval(interval);
       document.getElementById('bottomNav').classList.add('vis');
