@@ -435,12 +435,11 @@ body::before {
         <div class="field"><label>Contraseña</label><input id="tPass" type="password" placeholder="••••"></div>
       </div>
       <div class="field">
-        <label>Equipo (namespace/client/device)</label>
-        <input id="tTopic" placeholder="agua/vacoto/rom_base_01"
-               style="font-family:var(--mono);font-size:13px"
-               oninput="localStorage.setItem('hydra_last_path',this.value)">
+        <label>Namespace (ej: agua)</label>
+        <input id="tTopic" placeholder="agua" value="agua"
+               style="font-family:var(--mono);font-size:13px">
         <div style="font-size:10px;color:var(--text3);margin-top:4px">
-          Ingresá el path completo del equipo
+          Solo el namespace — los equipos se detectan automáticamente
         </div>
       </div>
     </div>
@@ -708,23 +707,16 @@ async function doLogin() {
     cfg = CLIENT_CODES[code];
     if (!cfg) { showLoginErr('Código inválido — verificá el código con tu proveedor'); return; }
   } else {
-    const rawPath = document.getElementById('tTopic').value.trim().replace(/\/+$/, '');
-    const pathParts = rawPath.split('/').filter(Boolean);
-    if (pathParts.length < 3) {
-      showLoginErr('Ingresá el path completo: namespace/client/device  (ej: agua/vacoto/rom_base_01)');
-      return;
-    }
-    const [pNs, pClient, pDevice] = pathParts;
+    const ns = (document.getElementById('tTopic').value.trim() || 'agua').replace(/\/+$/,'');
     cfg = {
       host: document.getElementById('tHost').value.trim(),
       port: parseInt(document.getElementById('tPort').value) || 8884,
       user: document.getElementById('tUser').value.trim(),
       pass: document.getElementById('tPass').value,
-      topic: pNs + '/' + pClient + '/' + pDevice + '/#',
-      clientFilter: pClient,
-      deviceFilter: pDevice,
+      topic: ns + '/#',
       techMode: true,
-      label: pClient + ' / ' + pDevice,
+      label: 'Modo Técnico',
+      // No clientFilter/deviceFilter — shows all clients
     };
     if (!cfg.host) { showLoginErr('Ingresá el host del broker'); return; }
   }
@@ -792,18 +784,35 @@ function onConnected() {
   console.log('[Hydra] clientFilter:', loginCfg.clientFilter || 'none (tech mode)');
 
   if (loginCfg.clientFilter) {
-    // CLIENT or TECH with specific device: spinner → dashboard
+    // CLIENT MODE: spinner → auto-navigate to device
     document.getElementById('waitLabel').textContent = 'Conectado — aguardando datos…';
     document.getElementById('waitSub').textContent = loginCfg.label || loginCfg.clientFilter;
     document.getElementById('waitTopic').textContent = loginCfg.topic;
     showScreen('waiting');
     waitForDeviceData();
   } else {
-    // Fallback: no filter set (shouldn't happen with new tech mode)
+    // TECH MODE: show clients list, populate as messages arrive
     document.getElementById('bottomNav').classList.add('vis');
     showScreen('clients');
-    refreshClientsList();
+    startClientListRefresh();
   }
+}
+
+function startClientListRefresh() {
+  // Refresh client list as MQTT messages arrive — stop after 30s or when stable
+  let ticks = 0;
+  let lastCount = 0;
+  refreshClientsList();
+  const iv = setInterval(() => {
+    ticks++;
+    const count = Object.keys(devices).length;
+    refreshClientsList();
+    if (count === lastCount && ticks > 6) {
+      clearInterval(iv); // stable — stop refreshing
+    }
+    lastCount = count;
+    if (ticks >= 60) clearInterval(iv); // hard stop at 30s
+  }, 500);
 }
 
 function waitForDeviceData() {
@@ -940,12 +949,16 @@ function onMsg(msg) {
     // Update tile in open dashboard (fast, no re-render)
     if (currentDevKey === devKey) partialUpdateTile(fullKey, val);
 
-    // Update client card only if in clients view (throttled)
+    // Update client card if in clients view
     if (activeNav === 'clients') {
       const now = Date.now();
-      if (!dev._lastCardUpdate || now - dev._lastCardUpdate > 2000) {
+      if (!dev._lastCardUpdate || now - dev._lastCardUpdate > 1000) {
         dev._lastCardUpdate = now;
-        refreshClientCard(client);
+        if (loginCfg && loginCfg.techMode && !loginCfg.clientFilter) {
+          refreshClientsList(); // tech mode: rebuild full list
+        } else {
+          refreshClientCard(client);
+        }
       }
     }
   }
@@ -1849,6 +1862,13 @@ function fmtTime(ts) {
 // ═══════════════════════════════════════════════════════════
 // Show login screen on load
 showScreen('login');
+
+// Restore last used tech path
+(function() {
+  const p = localStorage.getItem('hydra_last_path');
+  const el = document.getElementById('tTopic');
+  if (p && el) el.value = p;
+})();
 
 // Auto-login from URL ?code=XXXXX
 const urlCode = new URLSearchParams(location.search).get('code');
