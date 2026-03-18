@@ -348,7 +348,7 @@ body::before {
   <div class="logo">HYDRA<em>/monitor</em></div>
   <button class="back-btn" id="btnBack" onclick="goBack()">← Volver</button>
   <div class="topbar-right">
-    <div class="conn-badge" id="connBadge">
+    <div class="conn-badge" id="connBadge" style="display:none">
       <div class="conn-dot"></div>
       <span id="connLabel">desconectado</span>
     </div>
@@ -392,6 +392,13 @@ body::before {
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
     <div class="login-err" id="loginErr"></div>
 
+    <div id="jsonHint" style="display:none;margin-top:12px;padding:10px 12px;background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.3);border-radius:8px;font-size:11px;color:#ff6b7a">
+      ⚠ No se pudo cargar la configuración (clients.json).<br>
+      Verificá que el archivo existe en el repositorio y que GitHub Pages está activo.
+    </div>
+    <div id="jsonOk" style="display:none;margin-top:10px;font-size:11px;color:var(--green)">
+      ✓ Configuración cargada
+    </div>
     <div class="login-mode-toggle">
       <span id="modeHint">¿Sos técnico? </span>
       <a onclick="toggleLoginMode()"><span id="modeLinkText">Acceso técnico</span></a>
@@ -469,16 +476,15 @@ async function loadClientCodes() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     CLIENT_CODES = await resp.json();
     console.log('[Hydra] clients.json cargado:', Object.keys(CLIENT_CODES));
+    const ok = document.getElementById('jsonOk');
+    if (ok) { ok.style.display = 'block'; ok.textContent = '✓ Configuración cargada — ' + Object.keys(CLIENT_CODES).length + ' código(s)'; }
   } catch(e) {
-    console.warn('[Hydra] No se pudo cargar clients.json, usando fallback:', e.message);
-    // ── FALLBACK hardcodeado (para cuando no hay servidor) ──────
-    CLIENT_CODES = {
-      "TECNICO": {
-        host: "TU_BROKER.hivemq.cloud",
-        port: 8884, user: "TU_USUARIO", pass: "TU_PASSWORD",
-        topic: "agua/#", label: "Modo Técnico", techMode: true,
-      },
-    };
+    console.warn('[Hydra] No se pudo cargar clients.json:', e.message);
+    // Show warning on login screen
+    const hint = document.getElementById('jsonHint');
+    if (hint) hint.style.display = 'block';
+    // Fallback vacío — el usuario verá "Código inválido" si el JSON no carga
+    CLIENT_CODES = {};
   }
 }
 
@@ -1361,6 +1367,7 @@ function copyText(txt) {
 // ═══════════════════════════════════════════════════════════
 function setConn(state, label) {
   const b = document.getElementById('connBadge');
+  b.style.display = 'flex';
   b.className = 'conn-badge ' + (state === 'on' ? 'on' : state === 'ing' ? 'ing' : '');
   document.getElementById('connLabel').textContent = label;
 }
