@@ -630,16 +630,25 @@ SECTIONS.forEach(sec => {
   });
 });
 
-// Alarm labels
-
-// CHART COLORS per variable
-const CHART_COLORS = {
-  'tele/flow_perm_lpm':  '#00d4ff', 'tele/flow_rej_lpm': '#7c4dff', 'tele/flow_feed_lpm': '#00b0ff',
-  'tele/cond_perm_us':   '#ff6d00', 'tele/cond_feed_us': '#ff9100',
-  'tele/p_feed_bar':     '#00e676', 'tele/p_high_bar':   '#69f0ae', 'tele/p_perm_bar': '#b9f6ca',
-  'tele/dp_membrane_bar':'#ff3d57', 'tele/dp_prefilter_bar':'#ff6090',
-  'tele/temp_c':         '#ffd740', 'tele/recovery_pct': '#b388ff',
-  'tele/tds_perm_ppm':   '#ffab40', 'tele/tds_feed_ppm': '#ffd180',
+// ── ALARM LABELS ─────────────────────────────────────────────
+const ALARM_LABELS = {
+  offline: 'Equipo offline',
+  no_water: 'Sin agua de alimentación',
+  low_pressure: 'Baja presión',
+  high_pressure: 'Alta presión',
+  no_flow: 'Sin caudal',
+  leak: 'Pérdida detectada',
+  door_open: 'Puerta abierta',
+  cistern_empty: 'Cisterna vacía',
+  tank_full: 'Tanque lleno',
+  service_due: 'Servicio vencido',
+  conductivity_high: 'Conductividad alta',
+  tds_high: 'TDS alto',
+  prefilter_dp_high: 'ΔP prefiltro alto',
+  membrane_dp_high: 'ΔP membrana alto',
+  pump_fault: 'Falla de bomba',
+  retry_limit: 'Límite de reintentos',
+  generic_fault: 'Falla general'
 };
 
 // ═══════════════════════════════════════════════════════════
