@@ -435,13 +435,8 @@ body::before {
         <div class="field"><label>Contraseña</label><input id="tPass" type="password" placeholder="••••"></div>
       </div>
       <div class="field">
-        <label>Namespace / Client ID / Device ID</label>
-        <input id="tTopic" placeholder="agua/vacoto/rom_base_01"
-               style="font-family:var(--mono);font-size:13px"
-               oninput="this.value=this.value.toLowerCase().trim()">
-        <div style="font-size:10px;color:var(--text3);margin-top:4px">
-          Formato: <span style="font-family:var(--mono);color:var(--text2)">namespace/client/device</span>
-        </div>
+        <label>Topic wildcard</label>
+        <input id="tTopic" value="agua/#">
       </div>
     </div>
 
@@ -635,6 +630,19 @@ SECTIONS.forEach(sec => {
   });
 });
 
+const ALARM_LABELS = {
+  'offline':          'Sin comunicación',
+  'low_pressure':     'Presión baja',
+  'high_pressure':    'Presión alta',
+  'no_water_cistern': 'Sin agua cisterna',
+  'no_water':         'Sin agua',
+  'low_flow':         'Caudal bajo',
+  'no_flow':          'Sin caudal',
+  'leak':             'Pérdida detectada',
+  'service_due':      'Servicio requerido',
+  'membrane_fouling': 'Membrana sucia',
+};
+
 // Alarm labels
 
 // CHART COLORS per variable
@@ -695,24 +703,14 @@ async function doLogin() {
     cfg = CLIENT_CODES[code];
     if (!cfg) { showLoginErr('Código inválido — verificá el código con tu proveedor'); return; }
   } else {
-    const rawTopic = document.getElementById('tTopic').value.trim().replace(/\/+$/,'');
-    const topicParts = rawTopic.split('/').filter(Boolean);
-    if (topicParts.length < 3) {
-      showLoginErr('Ingresá el path completo: namespace/client/device');
-      return;
-    }
-    const [tNs, tClient, tDevice] = topicParts;
     cfg = {
       host: document.getElementById('tHost').value.trim(),
       port: parseInt(document.getElementById('tPort').value) || 8884,
       user: document.getElementById('tUser').value.trim(),
       pass: document.getElementById('tPass').value,
-      topic: `${tNs}/${tClient}/${tDevice}/#`,
-      clientFilter: tClient,
-      deviceFilter: tDevice,
-      nsFilter: tNs,
+      topic: document.getElementById('tTopic').value.trim() || 'agua/#',
       techMode: true,
-      label: `${tClient} / ${tDevice}`,
+      label: 'Modo Técnico',
     };
     if (!cfg.host) { showLoginErr('Ingresá el host del broker'); return; }
   }
@@ -779,14 +777,14 @@ function onConnected() {
   console.log('[Hydra] clientFilter:', loginCfg.clientFilter || 'none (tech mode)');
 
   if (loginCfg.clientFilter) {
-    // CLIENT or TECH with specific device: show spinner and wait for data
+    // CLIENT MODE: show spinner and wait for device data to arrive
     document.getElementById('waitLabel').textContent = 'Conectado — aguardando datos…';
     document.getElementById('waitSub').textContent = loginCfg.label || loginCfg.clientFilter;
     document.getElementById('waitTopic').textContent = loginCfg.topic;
     showScreen('waiting');
     waitForDeviceData();
   } else {
-    // Should not happen anymore, but fallback to clients list
+    // TECH MODE: show clients list
     document.getElementById('bottomNav').classList.add('vis');
     showScreen('clients');
     refreshClientsList();
@@ -797,11 +795,9 @@ function waitForDeviceData() {
   let attempts = 0;
   const interval = setInterval(() => {
     attempts++;
-    const myDevs = Object.values(devices).filter(d => {
-      const clientOk = !loginCfg.clientFilter || d.client.toLowerCase() === loginCfg.clientFilter.toLowerCase();
-      const deviceOk = !loginCfg.deviceFilter || d.device.toLowerCase() === loginCfg.deviceFilter.toLowerCase();
-      return clientOk && deviceOk;
-    });
+    const myDevs = Object.values(devices).filter(d =>
+      !loginCfg.clientFilter || d.client === loginCfg.clientFilter
+    );
     if (myDevs.length > 0) {
       clearInterval(interval);
       document.getElementById('bottomNav').classList.add('vis');
