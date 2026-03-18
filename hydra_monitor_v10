@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080d1a">
+<title>Hydra Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<!-- PWA: permite instalar como app en el homescreen -->
+<link rel="manifest" id="pwaManifest">
+<script>
+// Generate inline manifest with current URL so it works from any host
+(function() {
+  const urlCode = new URLSearchParams(location.search).get('code') || '';
+  const startUrl = location.pathname + (urlCode ? '?code=' + urlCode : '');
+  const manifest = {
+    name: 'Hydra Monitor' + (urlCode ? ' — ' + urlCode : ''),
+    short_name: 'Hydra',
+    description: 'Monitor de equipos de tratamiento de agua',
+    start_url: startUrl,
+    display: 'standalone',
+    background_color: '#080d1a',
+    theme_color: '#080d1a',
+    orientation: 'portrait-primary',
+    icons: [
+      { src: 'data:image/svg+xml,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+          <rect width="192" height="192" rx="38" fill="#080d1a"/>
+          <rect width="192" height="192" rx="38" fill="url(#g)"/>
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#0e1525"/>
+              <stop offset="100%" stop-color="#1a2235"/>
+            </linearGradient>
+          </defs>
+          <circle cx="96" cy="78" r="32" fill="none" stroke="#00d4ff" stroke-width="5"/>
+          <circle cx="96" cy="78" r="18" fill="#00d4ff" opacity=".15"/>
+          <path d="M96 46 Q110 62 96 78 Q82 62 96 46Z" fill="#00d4ff"/>
+          <rect x="60" y="118" width="72" height="4" rx="2" fill="#1e2d45"/>
+          <rect x="60" y="118" width="48" height="4" rx="2" fill="#00d4ff"/>
+          <rect x="60" y="130" width="72" height="4" rx="2" fill="#1e2d45"/>
+          <rect x="60" y="130" width="30" height="4" rx="2" fill="#00e676"/>
+          <rect x="60" y="142" width="72" height="4" rx="2" fill="#1e2d45"/>
+          <rect x="60" y="142" width="55" height="4" rx="2" fill="#ffab40"/>
+        </svg>`),
+        sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable'
+      }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  document.getElementById('pwaManifest').href = URL.createObjectURL(blob);
+})();
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg:       #080d1a;
+  --bg2:      #0e1525;
+  --bg3:      #151f33;
+  --bg4:      #1c2840;
+  --border:   #1e2d45;
+  --border2:  #263550;
+  --accent:   #00d4ff;
+  --accentd:  #0088cc;
+  --green:    #00e676;
+  --greend:   #00b248;
+  --red:      #ff3d57;
+  --redd:     #cc1f35;
+  --orange:   #ffab40;
+  --yellow:   #ffd740;
+  --purple:   #b388ff;
+  --text:     #e2ecff;
+  --text2:    #7a9cc4;
+  --text3:    #3d5470;
+  --font:     'DM Sans', system-ui, sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+  --r:        10px;
+  --r2:       7px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100dvh; overflow-x: hidden; }
+
+/* Dot grid bg */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(circle, rgba(0,180,255,0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ══ TOPBAR ══════════════════════════════════════════════════ */
+.topbar {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(8,13,26,0.9); backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  height: 52px; padding: 0 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.logo { font-family: var(--mono); font-size: 14px; color: var(--accent); letter-spacing:.06em; flex-shrink:0; }
+.logo em { color: var(--text3); font-style: normal; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.conn-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600; letter-spacing:.06em;
+  padding: 4px 10px; border-radius: 20px;
+  background: rgba(255,61,87,0.12); border: 1px solid rgba(255,61,87,0.25);
+  color: var(--red); transition: all .3s;
+}
+.conn-badge.on { background: rgba(0,230,118,0.1); border-color: rgba(0,230,118,.25); color: var(--green); }
+.conn-badge.ing { background: rgba(255,171,64,0.1); border-color: rgba(255,171,64,.25); color: var(--orange); animation: blink 1s infinite; }
+.conn-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.back-btn {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--text2); font-size: 12px; padding: 5px 12px; cursor: pointer;
+  display: none; align-items: center; gap: 5px;
+}
+.back-btn.vis { display: flex; }
+
+/* ══ SCREENS ═════════════════════════════════════════════════ */
+.screen { display: none; position: relative; z-index: 1; padding: 12px 12px 80px; animation: screenIn .22s ease both; }
+.screen.active { display: block; }
+@keyframes screenIn { from{opacity:0;transform:translateX(18px)} to{opacity:1;transform:translateX(0)} }
+@keyframes screenBack { from{opacity:0;transform:translateX(-18px)} to{opacity:1;transform:translateX(0)} }
+
+/* ══ LOGIN SCREEN ════════════════════════════════════════════ */
+#screenLogin {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: calc(100dvh - 52px);
+  padding: 24px;
+}
+.login-card {
+  width: 100%; max-width: 360px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 28px 24px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+}
+.login-logo { font-family: var(--mono); font-size: 22px; color: var(--accent); margin-bottom: 4px; }
+.login-sub { font-size: 12px; color: var(--text3); margin-bottom: 24px; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing:.1em; text-transform: uppercase; margin-bottom: 5px; }
+.field input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 11px 14px; color: var(--text);
+  font-size: 14px; font-family: var(--mono); outline: none;
+  transition: border-color .2s;
+}
+.field input:focus { border-color: var(--accentd); }
+.field input::placeholder { color: var(--text3); }
+.login-btn {
+  width: 100%; padding: 13px; background: var(--accentd);
+  border: none; border-radius: var(--r2); color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  letter-spacing:.04em; transition: all .2s; margin-top: 4px;
+}
+.login-btn:hover { background: var(--accent); }
+.login-btn:active { transform: scale(.98); }
+.login-err { font-size: 12px; color: var(--red); margin-top: 10px; display: none; }
+.login-mode-toggle {
+  text-align: center; margin-top: 16px; font-size: 11px; color: var(--text3);
+}
+.login-mode-toggle a { color: var(--accent); cursor: pointer; text-decoration: none; }
+
+/* Tech connect fields */
+#techFields { display: none; }
+.field-row { display: flex; gap: 10px; }
+.field-row .field { flex: 1; }
+.field-row .field.sm { flex: 0 0 80px; }
+
+/* ══ CLIENTS SCREEN ══════════════════════════════════════════ */
+.screen-title { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing:.1em; text-transform: uppercase; margin-bottom: 12px; }
+
+.client-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); margin-bottom: 10px;
+  cursor: pointer; transition: border-color .2s, transform .15s;
+  overflow: hidden; animation: fadeUp .3s ease both;
+}
+.client-card:hover { border-color: var(--border2); }
+.client-card:active { transform: scale(.99); }
+.client-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+.client-icon {
+  width: 40px; height: 40px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--accentd), #005588);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.client-info { flex: 1; min-width: 0; }
+.client-name { font-size: 15px; font-weight: 600; }
+.client-meta { font-size: 11px; color: var(--text2); margin-top: 2px; font-family: var(--mono); }
+.client-stats { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding: 0 16px 14px; }
+.client-stat-chip {
+  font-size: 10px; font-family: var(--mono); padding: 3px 8px;
+  border-radius: 5px; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text2);
+}
+.client-stat-chip.alarm { border-color: rgba(255,61,87,.3); color: var(--red); background: rgba(255,61,87,.08); }
+.client-stat-chip.online { border-color: rgba(0,230,118,.3); color: var(--green); }
+
+/* ══ DEVICES SCREEN ══════════════════════════════════════════ */
+.device-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); margin-bottom: 10px;
+  cursor: pointer; transition: border-color .2s;
+  overflow: hidden; animation: fadeUp .25s ease both;
+}
+.device-card:hover { border-color: var(--border2); }
+.device-header { padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+.state-badge {
+  padding: 3px 9px; border-radius: 5px; font-size: 9px;
+  font-weight: 700; letter-spacing:.08em; font-family: var(--mono); flex-shrink: 0;
+}
+.s-RUNNING    { background: rgba(0,230,118,.15); color: var(--green); border: 1px solid rgba(0,230,118,.3); }
+.s-IDLE       { background: rgba(100,130,180,.1); color: var(--text2); border: 1px solid var(--border); }
+.s-STARTING   { background: rgba(255,171,64,.15); color: var(--orange); border: 1px solid rgba(255,171,64,.3); }
+.s-OFFLINE    { background: rgba(255,61,87,.15); color: var(--red); border: 1px solid rgba(255,61,87,.3); }
+.s-LEARNING   { background: rgba(0,212,255,.15); color: var(--accent); border: 1px solid rgba(0,212,255,.3); }
+.s-WAIT_CISTERN { background: rgba(255,215,64,.12); color: var(--yellow); border: 1px solid rgba(255,215,64,.3); }
+.s-default    { background: rgba(100,130,180,.1); color: var(--text2); border: 1px solid var(--border); }
+
+.device-name { flex: 1; min-width: 0; }
+.device-id { font-size: 14px; font-weight: 600; }
+.device-path { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 1px; }
+.alarm-pill {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+  background: rgba(255,61,87,.15); border: 1px solid rgba(255,61,87,.3);
+  color: var(--red); animation: blink 2s infinite; flex-shrink:0;
+}
+.chevron { color: var(--text3); font-size: 10px; transition: transform .25s; flex-shrink:0; }
+.device-card.open .chevron { transform: rotate(180deg); }
+
+/* ══ DASHBOARD ═══════════════════════════════════════════════ */
+.device-body { display: none; padding: 0 14px 14px; }
+.device-card.open .device-body { display: block; }
+
+/* Section header */
+.sec-hdr {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 9px; font-weight: 700; color: var(--text3);
+  letter-spacing: .1em; text-transform: uppercase;
+  margin: 14px 0 8px;
+}
+.sec-hdr::after { content: ''; flex:1; height:1px; background: var(--border); }
+
+/* Signal tiles grid */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 7px; }
+
+.tile {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 10px 12px;
+  position: relative; overflow: hidden;
+  transition: border-color .2s;
+}
+.tile::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--text3); border-radius: 3px 0 0 3px;
+  transition: background .3s;
+}
+.tile.t-on::before   { background: var(--green); }
+.tile.t-off::before  { background: var(--text3); }
+.tile.t-alarm::before{ background: var(--red); }
+.tile.t-analog::before{ background: var(--accentd); }
+.tile.t-text::before { background: var(--purple); }
+
+.tile-label {
+  font-size: 9px; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tile-val {
+  font-family: var(--mono); font-size: 18px; font-weight: 500;
+  color: var(--text); line-height: 1; display: flex; align-items: baseline; gap: 3px;
+}
+.tile-val.big { font-size: 22px; }
+.tile-unit { font-size: 10px; color: var(--text3); }
+
+/* Digital indicator */
+.dig-row { display: flex; align-items: center; gap: 7px; }
+.dig-led {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  transition: background .3s, box-shadow .3s;
+}
+.led-on  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.led-off { background: var(--text3); }
+.led-alarm { background: var(--red); box-shadow: 0 0 8px var(--red); animation: blink 1.5s infinite; }
+.dig-label { font-size: 13px; font-weight: 500; }
+.dig-label.on  { color: var(--green); }
+.dig-label.off { color: var(--text3); }
+.dig-label.alarm { color: var(--red); }
+
+/* Alarms in dashboard */
+.alarm-list { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.alarm-row {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  background: rgba(255,61,87,.07); border: 1px solid rgba(255,61,87,.2);
+  border-radius: var(--r2); font-size: 12px;
+}
+.alarm-key { font-family: var(--mono); color: var(--red); flex: 1; font-size: 11px; }
+.alarm-dur { font-size: 10px; color: var(--text3); }
+.no-alarm { font-size: 12px; color: var(--green); padding: 6px 0; display: flex; align-items:center; gap:6px; }
+
+/* Stats bar */
+.stats-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 2px; }
+.stat-chip {
+  font-size: 10px; font-family: var(--mono); padding: 3px 9px;
+  border-radius: 5px; background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+}
+.stat-chip b { color: var(--text); }
+
+/* AI Diagnosis box */
+.diag-box {
+  background: rgba(0,136,204,.07); border: 1px solid rgba(0,136,204,.2);
+  border-radius: var(--r2); padding: 12px;
+}
+.diag-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+.diag-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+.diag-badge {
+  font-size: 9px; font-family: var(--mono); font-weight: 700;
+  padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
+}
+.db-alarm { background: rgba(255,61,87,.2); color: var(--red); }
+.db-warn  { background: rgba(255,171,64,.2); color: var(--orange); }
+.db-info  { background: rgba(0,212,255,.15); color: var(--accent); }
+.diag-ev  { font-size: 11px; color: var(--text2); padding: 1px 0 1px 10px; position: relative; }
+.diag-ev::before { content: '·'; position: absolute; left:2px; color: var(--accentd); }
+.diag-act { font-size: 11px; color: var(--text2); padding: 1px 0 1px 12px; position: relative; }
+.diag-act::before { content: '→'; position: absolute; left:0; font-size:9px; color: var(--green); top:3px; }
+.diag-sep { margin: 5px 0; border: none; border-top: 1px solid var(--border); }
+
+/* ══ CHARTS ══════════════════════════════════════════════════ */
+.chart-wrap {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 10px; margin-bottom: 7px;
+}
+.chart-title { font-size: 10px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.chart-title span { font-family: var(--mono); color: var(--accent); }
+.chart-canvas-wrap { position: relative; height: 100px; }
+
+/* ══ BOTTOM NAV ══════════════════════════════════════════════ */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(8,13,26,.95); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  display: none; padding-bottom: env(safe-area-inset-bottom,0px);
+}
+.bottom-nav.vis { display: flex; }
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 9px 4px; gap: 3px; background: none; border: none;
+  color: var(--text3); font-size: 9px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: color .2s;
+}
+.nav-btn svg { width: 19px; height: 19px; }
+.nav-btn.active { color: var(--accent); }
+
+/* ══ RAW TOPICS (tech) ═══════════════════════════════════════ */
+.raw-toggle { font-size: 11px; color: var(--text3); cursor: pointer; user-select:none; padding: 4px 0; }
+.raw-toggle:hover { color: var(--text2); }
+.raw-table { display: none; }
+.raw-table.vis { display: block; }
+.raw-row { display: flex; font-size: 10px; font-family: var(--mono); padding: 2px 4px; gap: 8px; border-radius: 3px; }
+.raw-row:nth-child(odd) { background: rgba(255,255,255,.02); }
+.raw-k { color: var(--text3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.raw-v { color: var(--text); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ══ EMPTY & LOADING ═════════════════════════════════════════ */
+.empty { text-align: center; padding: 50px 20px; color: var(--text3); }
+.empty-icon { font-size: 36px; margin-bottom: 10px; }
+.empty h3 { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+.empty p { font-size: 11px; line-height: 1.7; }
+
+/* ══ ANIMATIONS ══════════════════════════════════════════════ */
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes spin { to{transform:rotate(360deg)} }
+@keyframes flash { 0%{background:rgba(0,212,255,.15)} 100%{background:transparent} }
+
+/* ══ RESPONSIVE ══════════════════════════════════════════════ */
+@media (min-width:560px) {
+  #screenClients, #screenDevices, #screenDashboard { max-width: 640px; margin: 0 auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══════════════════════════════════════════════ -->
+<div class="topbar" id="appTopbar" style="display:none">
+  <div class="logo">HYDRA<em>/monitor</em></div>
+  <button class="back-btn" id="btnBack" onclick="goBack()">← Volver</button>
+  <div class="topbar-right">
+    <div class="conn-badge" id="connBadge" style="display:none">
+      <div class="conn-dot"></div>
+      <span id="connLabel">desconectado</span>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN TOPBAR -->
+<div class="topbar" id="loginTopbar">
+  <div class="logo">HYDRA<em>/monitor</em></div>
+</div>
+
+<!-- ══ SCREENS ═════════════════════════════════════════════ -->
+
+<!-- LOGIN -->
+<div class="screen" id="screenLogin">
+  <div class="login-card">
+    <div class="login-logo">// HYDRA</div>
+    <div class="login-sub">Monitor de equipos en tiempo real</div>
+
+    <!-- CLIENT MODE (default) -->
+    <div id="clientLoginFields">
+      <div class="field">
+        <label>Código de acceso</label>
+        <input id="accessCode" type="text" placeholder="ej: ACME2025" autocomplete="off"
+               style="text-transform:uppercase; letter-spacing:.1em; font-size:18px; text-align:center"
+               oninput="this.value=this.value.toUpperCase()">
+      </div>
+    </div>
+
+    <!-- TECH MODE -->
+    <div id="techFields">
+      <div class="field-row">
+        <div class="field"><label>Broker host</label><input id="tHost" placeholder="xxx.hivemq.cloud"></div>
+        <div class="field sm"><label>Puerto</label><input id="tPort" type="number" value="8884"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Usuario</label><input id="tUser" placeholder="usuario"></div>
+        <div class="field"><label>Contraseña</label><input id="tPass" type="password" placeholder="••••"></div>
+      </div>
+      <div class="field">
+        <label>Equipo (namespace/client/device)</label>
+        <input id="tTopic" placeholder="agua/vacoto/rom_base_01"
+               style="font-family:var(--mono);font-size:13px">
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">
+          Ingresá el path completo del equipo
+        </div>
+      </div>
+    </div>
+
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="loginErr"></div>
+
+    <div id="jsonHint" style="display:none;margin-top:12px;padding:10px 12px;background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.3);border-radius:8px;font-size:11px;color:#ff6b7a">
+      ⚠ No se pudo cargar la configuración (clients.json).<br>
+      Verificá que el archivo existe en el repositorio y que GitHub Pages está activo.
+    </div>
+    <div id="jsonOk" style="display:none;margin-top:10px;font-size:11px;color:var(--green)">
+      ✓ Configuración cargada
+    </div>
+    <div class="login-mode-toggle">
+      <span id="modeHint">¿Sos técnico? </span>
+      <a onclick="toggleLoginMode()"><span id="modeLinkText">Acceso técnico</span></a>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING SCREEN -->
+<div class="screen" id="screenWaiting">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:65vh;gap:18px;text-align:center;padding:24px">
+    <div style="width:52px;height:52px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
+    <div style="font-size:16px;font-weight:600;color:var(--text)" id="waitLabel">Conectando…</div>
+    <div style="font-size:12px;color:var(--text2)" id="waitSub">Esperando datos del equipo</div>
+    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:4px" id="waitTopic"></div>
+  </div>
+</div>
+
+<!-- CLIENTS LIST -->
+<div class="screen" id="screenClients">
+  <div class="screen-title">Clientes</div>
+  <div id="clientsList"></div>
+  <div class="empty" id="clientsEmpty" style="display:none">
+    <div class="empty-icon">📡</div>
+    <h3>Esperando datos…</h3>
+    <p>Suscripto al broker.<br>Los equipos aparecerán al llegar mensajes.</p>
+  </div>
+</div>
+
+<!-- DEVICES LIST (inside a client) -->
+<div class="screen" id="screenDevices">
+  <div class="screen-title" id="devicesTitle">Equipos</div>
+  <div id="devicesList"></div>
+</div>
+
+<!-- DASHBOARD (single device) -->
+<div class="screen" id="screenDashboard">
+  <div id="dashContent"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav" id="bottomNav">
+  <button class="nav-btn active" id="navClients" onclick="navTo('clients')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    Clientes
+  </button>
+  <button class="nav-btn" id="navAlarms" onclick="navTo('alarms')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+    Alarmas
+  </button>
+  <button class="nav-btn" id="navConfig" onclick="navTo('config')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+    </svg>
+    Config
+  </button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CLIENT CODES — editá esto para cada cliente
+// ═══════════════════════════════════════════════════════════
+// ── CLIENT CODES — cargados desde clients.json (mismo directorio) ──
+// Si no se puede cargar el JSON, se usa el fallback hardcodeado abajo.
+let CLIENT_CODES = {};
+
+async function loadClientCodes() {
+  try {
+    const resp = await fetch('./clients.json');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    CLIENT_CODES = await resp.json();
+    console.log('[Hydra] clients.json cargado:', Object.keys(CLIENT_CODES));
+    const ok = document.getElementById('jsonOk');
+    if (ok) { ok.style.display = 'block'; ok.textContent = '✓ Configuración cargada — ' + Object.keys(CLIENT_CODES).length + ' código(s)'; }
+  } catch(e) {
+    console.warn('[Hydra] No se pudo cargar clients.json:', e.message);
+    // Show warning on login screen
+    const hint = document.getElementById('jsonHint');
+    if (hint) hint.style.display = 'block';
+    // Fallback vacío — el usuario verá "Código inválido" si el JSON no carga
+    CLIENT_CODES = {};
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOPIC LABELS — structure matches official guide sections
+// ═══════════════════════════════════════════════════════════
+
+// SECTIONS define the fixed dashboard layout per the guide.
+// Every variable listed here will appear in the dashboard —
+// with its value if received, dimmed/empty if not yet received.
+const SECTIONS = [
+  {
+    key: 'estado', label: 'Estado del equipo',
+    vars: [
+      { k:'stat/run',        label:'Produciendo',   type:'digital' },
+      { k:'stat/status',     label:'Estado',        type:'text' },
+      { k:'stat/mode',       label:'Modo',          type:'text' },
+      { k:'stat/enabled',    label:'Habilitado',    type:'digital' },
+      { k:'stat/locked',     label:'Bloqueado',     type:'digital', invert:true },
+      { k:'stat/retries',    label:'Reintentos',    type:'number' },
+    ]
+  },
+  {
+    key: 'entradas', label: 'Entradas digitales',
+    vars: [
+      { k:'tele/cistern_ok',        label:'Cisterna',       type:'digital' },
+      { k:'tele/tank_demand',       label:'Demanda tanque', type:'digital' },
+      { k:'tele/pressure_ok',       label:'Presión OK',     type:'digital' },
+      { k:'tele/high_pressure_ok',  label:'P. alta OK',     type:'digital' },
+      { k:'tele/leak_ok',           label:'Sin pérdida',    type:'digital' },
+      { k:'tele/door_ok',           label:'Puerta OK',      type:'digital' },
+    ]
+  },
+  {
+    key: 'salidas', label: 'Salidas digitales',
+    vars: [
+      { k:'tele/bomba_baja',    label:'Bomba baja',     type:'digital' },
+      { k:'tele/bomba_alta',    label:'Bomba alta',     type:'digital' },
+      { k:'tele/flush_valve',   label:'Válvula flush',  type:'digital' },
+    ]
+  },
+  {
+    key: 'proceso', label: 'Proceso / Caudales',
+    vars: [
+      { k:'tele/flow_perm_lpm',  label:'Caudal permeado',  type:'analog', unit:'L/min', chart:true },
+      { k:'tele/flow_rej_lpm',   label:'Caudal rechazo',   type:'analog', unit:'L/min', chart:true },
+      { k:'tele/flow_feed_lpm',  label:'Caudal entrada',   type:'analog', unit:'L/min', chart:true },
+      { k:'tele/total_liters',   label:'Total litros',     type:'analog', unit:'L',     chart:true },
+      { k:'tele/total_m3',       label:'Total m³',         type:'analog', unit:'m³',   chart:true },
+      { k:'tele/recovery_pct',   label:'Recuperación',     type:'analog', unit:'%',     chart:true },
+    ]
+  },
+  {
+    key: 'presiones', label: 'Presiones',
+    vars: [
+      { k:'tele/p_feed_bar',       label:'P. entrada',    type:'analog', unit:'bar', chart:true },
+      { k:'tele/p_high_bar',       label:'P. alta',       type:'analog', unit:'bar', chart:true },
+      { k:'tele/p_perm_bar',       label:'P. permeado',   type:'analog', unit:'bar', chart:true },
+      { k:'tele/dp_prefilter_bar', label:'ΔP prefiltro',  type:'analog', unit:'bar', chart:true },
+      { k:'tele/dp_membrane_bar',  label:'ΔP membrana',   type:'analog', unit:'bar', chart:true },
+    ]
+  },
+  {
+    key: 'calidad', label: 'Calidad del agua',
+    vars: [
+      { k:'tele/cond_feed_us',   label:'Cond. entrada',     type:'analog', unit:'µS/cm', chart:true },
+      { k:'tele/cond_perm_us',   label:'Cond. permeado',    type:'analog', unit:'µS/cm', chart:true },
+      { k:'tele/tds_feed_ppm',   label:'TDS entrada',       type:'analog', unit:'ppm',   chart:true },
+      { k:'tele/tds_perm_ppm',   label:'TDS permeado',      type:'analog', unit:'ppm',   chart:true },
+      { k:'tele/temp_c',         label:'Temperatura',       type:'analog', unit:'°C',    chart:true },
+      { k:'tele/ph',             label:'pH',                type:'analog', unit:'',      chart:true },
+      { k:'tele/orp_mv',         label:'ORP',               type:'analog', unit:'mV',    chart:true },
+    ]
+  },
+  {
+    key: 'contadores', label: 'Contadores',
+    vars: [
+      { k:'tele/pump_hours_low',          label:'Hrs bomba baja',      type:'analog', unit:'h', chart:true },
+      { k:'tele/pump_hours_high',         label:'Hrs bomba alta',      type:'analog', unit:'h', chart:true },
+      { k:'tele/starts_count',            label:'Arranques',           type:'analog', unit:'',  chart:true },
+      { k:'tele/flush_count',             label:'Flushes',             type:'analog', unit:'',  chart:true },
+      { k:'tele/service_hours_remaining', label:'Servicio restante',   type:'analog', unit:'h', chart:true },
+    ]
+  },
+];
+
+// Flat LABELS map for quick lookup (used by other parts of the code)
+const LABELS = {};
+SECTIONS.forEach(sec => {
+  sec.vars.forEach(v => {
+    LABELS[v.k] = { ...v, group: sec.key };
+  });
+});
+
+const ALARM_LABELS = {
+  'offline':          'Sin comunicación',
+  'low_pressure':     'Presión baja',
+  'high_pressure':    'Presión alta',
+  'no_water_cistern': 'Sin agua cisterna',
+  'no_water':         'Sin agua',
+  'low_flow':         'Caudal bajo',
+  'no_flow':          'Sin caudal',
+  'leak':             'Pérdida detectada',
+  'service_due':      'Servicio requerido',
+  'membrane_fouling': 'Membrana sucia',
+};
+
+// Alarm labels
+
+// CHART COLORS per variable
+const CHART_COLORS = {
+  'tele/flow_perm_lpm':  '#00d4ff', 'tele/flow_rej_lpm': '#7c4dff', 'tele/flow_feed_lpm': '#00b0ff',
+  'tele/cond_perm_us':   '#ff6d00', 'tele/cond_feed_us': '#ff9100',
+  'tele/p_feed_bar':     '#00e676', 'tele/p_high_bar':   '#69f0ae', 'tele/p_perm_bar': '#b9f6ca',
+  'tele/dp_membrane_bar':'#ff3d57', 'tele/dp_prefilter_bar':'#ff6090',
+  'tele/temp_c':         '#ffd740', 'tele/recovery_pct': '#b388ff',
+  'tele/tds_perm_ppm':   '#ffab40', 'tele/tds_feed_ppm': '#ffd180',
+};
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let mqtt = null;
+let devices = {};        // "ns/client/device" → DeviceData
+let loginCfg = null;
+let activeNav = 'clients';
+let currentClientFilter = null;  // for screenDevices
+let currentDevKey = null;        // for screenDashboard
+let loginMode = 'client';        // 'client' | 'tech'
+let charts = {};                 // devKey+varKey → Chart instance
+const HISTORY_MAX = 1080;        // ~3h at 10s intervals
+
+function makeDevice(ns, client, device) {
+  return {
+    ns, client, device,
+    last: {}, alarms: {},
+    aiState: null, aiReport: null,
+    lastSeen: Date.now(),
+    history: {},  // varKey → [{t, v}]
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════════
+function toggleLoginMode() {
+  loginMode = loginMode === 'client' ? 'tech' : 'client';
+  const isTech = loginMode === 'tech';
+  document.getElementById('clientLoginFields').style.display = isTech ? 'none' : 'block';
+  document.getElementById('techFields').style.display = isTech ? 'block' : 'none';
+  document.getElementById('modeHint').textContent = isTech ? '¿Sos cliente? ' : '¿Sos técnico? ';
+  document.getElementById('modeLinkText').textContent = isTech ? 'Acceso con código' : 'Acceso técnico';
+}
+
+async function doLogin() {
+  const errEl = document.getElementById('loginErr');
+  errEl.style.display = 'none';
+  // Ensure codes are loaded (fetch is fast if cached)
+  if (Object.keys(CLIENT_CODES).length === 0) await loadClientCodes();
+
+  let cfg;
+  if (loginMode === 'client') {
+    const code = document.getElementById('accessCode').value.trim().toUpperCase();
+    if (!code) { showLoginErr('Ingresá tu código de acceso'); return; }
+    cfg = CLIENT_CODES[code];
+    if (!cfg) { showLoginErr('Código inválido — verificá el código con tu proveedor'); return; }
+  } else {
+    const rawPath = document.getElementById('tTopic').value.trim().replace(/\/+$/, '');
+    const pathParts = rawPath.split('/').filter(Boolean);
+    if (pathParts.length < 3) {
+      showLoginErr('Ingresá el path completo: namespace/client/device  (ej: agua/vacoto/rom_base_01)');
+      return;
+    }
+    const [pNs, pClient, pDevice] = pathParts;
+    cfg = {
+      host: document.getElementById('tHost').value.trim(),
+      port: parseInt(document.getElementById('tPort').value) || 8884,
+      user: document.getElementById('tUser').value.trim(),
+      pass: document.getElementById('tPass').value,
+      topic: pNs + '/' + pClient + '/' + pDevice + '/#',
+      clientFilter: pClient,
+      deviceFilter: pDevice,
+      techMode: true,
+      label: pClient + ' / ' + pDevice,
+    };
+    if (!cfg.host) { showLoginErr('Ingresá el host del broker'); return; }
+  }
+
+  loginCfg = cfg;
+  setConn('ing', 'conectando…');
+
+  const clientId = 'hydra_' + Math.random().toString(36).substr(2,8);
+  // Build WebSocket URL explicitly to avoid Paho path issues
+  // Always use 8884 for WebSocket (8883 = raw MQTT only, doesn't work in browser)
+  const wsPort = 8884;
+  const wsUrl = 'wss://' + cfg.host + ':' + wsPort + '/mqtt';
+  console.log('[Hydra] Connecting to:', wsUrl, 'user:', cfg.user);
+  mqtt = new Paho.Client(cfg.host, wsPort, '/mqtt', clientId);
+  mqtt.onConnectionLost = onLost;
+  mqtt.onMessageArrived = onMsg;
+
+  // Test raw WebSocket first to diagnose
+  try {
+    const testWs = new WebSocket(wsUrl);
+    testWs.onopen  = () => { console.log('[Hydra] Raw WebSocket OK'); testWs.close(); };
+    testWs.onerror = (e) => { console.error('[Hydra] Raw WebSocket FAILED:', e); };
+  } catch(e) { console.error('[Hydra] WebSocket constructor error:', e); }
+
+  mqtt.connect({
+    useSSL: true,
+    userName: cfg.user,
+    password: cfg.pass,
+    keepAliveInterval: 30,
+    cleanSession: true,
+    onSuccess: onConnected,
+    onFailure: (e) => {
+      setConn('off', 'desconectado');
+      console.error('[Hydra] MQTT connect failed:', e);
+      showLoginErr('Error: ' + (e.errorMessage || 'Sin respuesta') + ' | URL: ' + wsUrl);
+    }
+  });
+}
+
+function showLoginErr(msg) {
+  const el = document.getElementById('loginErr');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function onConnected() {
+  setConn('on', 'conectado');
+  console.log('[onConnected] clientFilter:', loginCfg.clientFilter, '| deviceFilter:', loginCfg.deviceFilter, '| topic:', loginCfg.topic);
+
+  // ── Ocultar login completamente y resetear scroll ──────────
+  const loginScreen = document.getElementById('screenLogin');
+  const loginTopbar = document.getElementById('loginTopbar');
+  const appTopbar   = document.getElementById('appTopbar');
+  if (loginScreen) { loginScreen.classList.remove('active'); loginScreen.style.display = 'none'; }
+  if (loginTopbar) loginTopbar.style.display = 'none';
+  if (appTopbar)   appTopbar.style.display   = 'flex';
+  window.scrollTo(0, 0);
+
+  // Subscribe to data topics
+  console.log('[Hydra] Subscribing to:', loginCfg.topic);
+  mqtt.subscribe(loginCfg.topic, { qos: 1 });
+  const baseTopic = loginCfg.topic.replace('/#','');
+  const aiTopic = baseTopic + '/+/+/ai/#';
+  console.log('[Hydra] Subscribing to AI:', aiTopic);
+  mqtt.subscribe(aiTopic, { qos: 0 });
+  console.log('[Hydra] clientFilter:', loginCfg.clientFilter || 'none (tech mode)');
+
+  if (loginCfg.clientFilter) {
+    // CLIENT or TECH with specific device: spinner → dashboard
+    document.getElementById('waitLabel').textContent = 'Conectado — aguardando datos…';
+    document.getElementById('waitSub').textContent = loginCfg.label || loginCfg.clientFilter;
+    document.getElementById('waitTopic').textContent = loginCfg.topic;
+    showScreen('waiting');
+    waitForDeviceData();
+  } else {
+    // Fallback: no filter set (shouldn't happen with new tech mode)
+    document.getElementById('bottomNav').classList.add('vis');
+    showScreen('clients');
+    refreshClientsList();
+  }
+}
+
+function waitForDeviceData() {
+  let attempts = 0;
+  const interval = setInterval(() => {
+    attempts++;
+    const myDevs = Object.values(devices).filter(d => {
+      const cf = loginCfg.clientFilter;
+      const df = loginCfg.deviceFilter;
+      const clientOk = !cf || d.client.toLowerCase() === cf.toLowerCase();
+      const deviceOk = !df || d.device.toLowerCase() === df.toLowerCase();
+      if (!clientOk || !deviceOk) console.log('[waitFor] skip:', d.client, d.device, '| filter:', cf, df);
+      return clientOk && deviceOk;
+    });
+    if (attempts === 1) console.log('[waitFor] devices so far:', Object.keys(devices));
+    if (myDevs.length > 0) {
+      clearInterval(interval);
+      document.getElementById('bottomNav').classList.add('vis');
+      if (myDevs.length === 1) {
+        const dev = myDevs[0];
+        openDevice(dev.ns + '/' + dev.client + '/' + dev.device);
+      } else {
+        openClient(loginCfg.clientFilter || myDevs[0].client);
+      }
+    } else if (attempts >= 30) {
+      clearInterval(interval);
+      document.getElementById('waitLabel').textContent = 'Sin respuesta del equipo';
+      document.getElementById('waitSub').textContent = 'Verificá que el equipo esté encendido';
+      document.getElementById('waitTopic').textContent = loginCfg.topic;
+      document.getElementById('bottomNav').classList.add('vis');
+    } else {
+      const d = '.'.repeat((attempts % 3) + 1);
+      document.getElementById('waitLabel').textContent = 'Aguardando datos' + d;
+    }
+  }, 500);
+}
+
+function onLost(resp) {
+  if (resp.errorCode !== 0) setConn('off', 'desconectado');
+}
+
+// ═══════════════════════════════════════════════════════════
+// MESSAGE HANDLER
+// ═══════════════════════════════════════════════════════════
+function onMsg(msg) {
+  const topic = msg.destinationName;
+  const payload = msg.payloadString;
+  console.log('[MQTT]', topic, '=', payload.slice(0,60));
+  // Log parsed parts for first few messages
+  if (Object.keys(devices).length < 3) {
+    const _p = topic.split('/');
+    console.log('[MQTT parsed] ns:', _p[0], '| client:', _p[1], '| device:', _p[2], '| group:', _p[3]);
+  }
+
+  const parts = topic.split('/');
+  if (parts.length < 4) return;
+
+  const ns = parts[0], client = parts[1], device = parts[2];
+  const group = parts[3], key = parts.slice(4).join('/');
+
+  // Skip engine HB
+  if (client === 'ai' && device === 'engine') return;
+
+  // Client filter (client mode) — case-insensitive match
+  if (loginCfg && loginCfg.clientFilter) {
+    const filter = loginCfg.clientFilter.toLowerCase().trim();
+    const incoming = client.toLowerCase().trim();
+    if (incoming !== filter) {
+      console.log('[MQTT] filtered:', incoming, '!== filter:', filter);
+      return;
+    }
+  }
+
+  const devKey = `${ns}/${client}/${device}`;
+  if (!devices[devKey]) {
+    devices[devKey] = makeDevice(ns, client, device);
+    console.log('[onMsg] new device:', devKey, '| clientFilter:', loginCfg && loginCfg.clientFilter);
+  }
+  const dev = devices[devKey];
+  dev.lastSeen = Date.now();
+
+  const fullKey = group + (key ? '/' + key : '');
+
+  if (group === 'alarm') {
+    const v = parseInt(payload);
+    if (v === 1) dev.alarms[key] = { ts: Date.now() };
+    else delete dev.alarms[key];
+    if (activeNav === 'clients') refreshClientCard(client);
+    // Alarm changed — update alarm section only, not full dashboard
+    if (currentDevKey === devKey) updateAlarmSection(devKey);
+
+  } else if (group === 'ai' && key === 'state') {
+    try { dev.aiState = JSON.parse(payload); } catch(e){}
+    // Only update the state badge, not full re-render
+    if (currentDevKey === devKey) updateStateBadge(devKey);
+
+  } else if (group === 'ai' && key === 'report') {
+    // Only store if valid JSON object with analysis data (ignore plain text payloads)
+    try {
+      const parsed = JSON.parse(payload);
+      if (parsed && typeof parsed === 'object' && (parsed.analysis || parsed.primary_diagnosis || parsed.diagnostics)) {
+        dev.aiReport = parsed;
+        console.log('[AI] report received, plugin:', (parsed.analysis||parsed).plugin_id,
+          'primary:', ((parsed.analysis||parsed).primary_diagnosis||{}).title || 'none');
+        if (currentDevKey === devKey) renderDashboard(devKey);
+      }
+    } catch(e) {
+      console.log('[AI] report parse failed (probably text payload), ignoring');
+    }
+
+  } else if (group !== 'event') {
+    let val = payload;
+    try {
+      const p = JSON.parse(payload);
+      if (typeof p === 'number' || typeof p === 'boolean') val = p;
+      else if (typeof p !== 'object') val = p;
+      else val = p;
+    } catch(e) {}
+    dev.last[fullKey] = val;
+
+    // History for analog/chartable vars
+    const lcfg = LABELS[fullKey];
+    if (lcfg && lcfg.chart) {
+      const num = parseFloat(val);
+      if (!isNaN(num)) {
+        if (!dev.history[fullKey]) dev.history[fullKey] = [];
+        dev.history[fullKey].push({ t: Date.now(), v: num });
+        if (dev.history[fullKey].length > HISTORY_MAX)
+          dev.history[fullKey].shift();
+        updateChart(devKey, fullKey);
+      }
+    }
+
+    // Update tile in open dashboard (fast, no re-render)
+    if (currentDevKey === devKey) partialUpdateTile(fullKey, val);
+
+    // Update client card only if in clients view (throttled)
+    if (activeNav === 'clients') {
+      const now = Date.now();
+      if (!dev._lastCardUpdate || now - dev._lastCardUpdate > 2000) {
+        dev._lastCardUpdate = now;
+        refreshClientCard(client);
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function showScreen(name, goBack) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen' + name.charAt(0).toUpperCase() + name.slice(1));
+  if (el) {
+    el.style.animation = goBack ? 'screenBack .22s ease both' : 'screenIn .22s ease both';
+    el.classList.add('active');
+    setTimeout(() => { if (el) el.style.animation = ''; }, 300);
+  }
+  // Toggle login vs app chrome
+  const isLogin = (name === 'login');
+  const lt = document.getElementById('loginTopbar');
+  const at = document.getElementById('appTopbar');
+  const ls = document.getElementById('screenLogin');
+  if (lt) lt.style.display = isLogin ? 'flex' : 'none';
+  if (at) at.style.display = isLogin ? 'none'  : 'flex';
+  if (ls && !isLogin) ls.classList.remove('active');
+  // Back button visibility
+  document.getElementById('btnBack').classList.toggle('vis', !['clients','waiting'].includes(name));
+  // Bottom nav visibility
+  document.getElementById('bottomNav').classList.toggle('vis', !['login','waiting'].includes(name));
+}
+
+function navTo(tab) {
+  activeNav = tab;
+  ['navClients','navAlarms','navConfig'].forEach(id =>
+    document.getElementById(id).classList.toggle('active', id === 'nav' + tab.charAt(0).toUpperCase() + tab.slice(1)));
+  currentDevKey = null;
+  charts = {};
+
+  if (tab === 'clients') {
+    refreshClientsList();
+    showScreen('clients');
+  } else if (tab === 'alarms') {
+    renderAlarmsScreen();
+  } else if (tab === 'config') {
+    renderConfigScreen();
+  }
+}
+
+function goBack() {
+  const active = document.querySelector('.screen.active');
+  if (!active) return;
+  const id = active.id;
+  if (id === 'screenDashboard') {
+    // Client mode with single device: no back, stay on dashboard
+    if (loginCfg && loginCfg.clientFilter) {
+      const myDevs = Object.values(devices).filter(d => d.client === loginCfg.clientFilter);
+      if (myDevs.length <= 1) return;
+      currentDevKey = null; charts = {};
+      renderDevicesScreen(loginCfg.clientFilter, true);
+    } else {
+      currentDevKey = null; charts = {};
+      renderDevicesScreen(currentClientFilter, true);
+    }
+  } else if (id === 'screenDevices') {
+    currentClientFilter = null;
+    navTo('clients');
+  }
+}
+
+function openClient(clientId) {
+  currentClientFilter = clientId;
+  renderDevicesScreen(clientId);
+}
+
+function openDevice(devKey) {
+  currentDevKey = devKey;
+  charts = {};
+  showScreen('dashboard');
+  document.getElementById('btnBack').classList.add('vis');
+  renderDashboard(devKey);
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENTS LIST
+// ═══════════════════════════════════════════════════════════
+function getClients() {
+  const map = {};
+  Object.values(devices).forEach(dev => {
+    if (!map[dev.client]) map[dev.client] = [];
+    map[dev.client].push(dev);
+  });
+  return map;
+}
+
+function refreshClientsList() {
+  const clients = getClients();
+  const list = document.getElementById('clientsList');
+  const empty = document.getElementById('clientsEmpty');
+
+  if (Object.keys(clients).length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Build or update each client card
+  Object.entries(clients).forEach(([clientId, devList], idx) => {
+    const cardId = 'cc_' + clientId;
+    let card = document.getElementById(cardId);
+    if (!card) {
+      card = document.createElement('div');
+      card.id = cardId;
+      card.className = 'client-card';
+      card.style.animationDelay = (idx * 60) + 'ms';
+      card.onclick = () => openClient(clientId);
+      list.appendChild(card);
+    }
+    card.innerHTML = buildClientCardHTML(clientId, devList);
+  });
+}
+
+function buildClientCardHTML(clientId, devList) {
+  const totalAlarms = devList.reduce((n, d) =>
+    n + Object.keys(d.alarms).filter(k => k !== 'offline').length, 0);
+  const onlineCount = devList.filter(d => {
+    const age = (Date.now() - d.lastSeen) / 1000;
+    return age < 200 && !d.alarms['offline'];
+  }).length;
+
+  const icons = ['💧','🏭','⚙','🔬','🌊'];
+  const icon = icons[clientId.charCodeAt(0) % icons.length];
+
+  let chips = `<span class="client-stat-chip online">● ${onlineCount}/${devList.length} online</span>`;
+  if (totalAlarms > 0) chips += `<span class="client-stat-chip alarm">⚠ ${totalAlarms} alarmas</span>`;
+  devList.forEach(d => chips += `<span class="client-stat-chip">${d.device}</span>`);
+
+  return `
+    <div class="client-header">
+      <div class="client-icon">${icon}</div>
+      <div class="client-info">
+        <div class="client-name">${clientId}</div>
+        <div class="client-meta">agua/${clientId} · ${devList.length} equipo(s)</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text3)">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </div>
+    <div class="client-stats">${chips}</div>`;
+}
+
+function refreshClientCard(clientId) {
+  const card = document.getElementById('cc_' + clientId);
+  if (!card) return;
+  const devList = Object.values(devices).filter(d => d.client === clientId);
+  card.innerHTML = buildClientCardHTML(clientId, devList);
+}
+
+// ═══════════════════════════════════════════════════════════
+// DEVICES SCREEN
+// ═══════════════════════════════════════════════════════════
+function renderDevicesScreen(clientId, isBack) {
+  const devList = Object.values(devices).filter(d => d.client === clientId);
+  document.getElementById('devicesTitle').textContent = clientId.toUpperCase();
+  const list = document.getElementById('devicesList');
+  list.innerHTML = '';
+
+  devList.forEach((dev, idx) => {
+    const devKey = `${dev.ns}/${dev.client}/${dev.device}`;
+    const state = dev.aiState ? dev.aiState.state : (dev.last['stat/status'] || 'INIT');
+    const stateClass = getStateClass(state);
+    const alarmCount = Object.keys(dev.alarms).filter(k => k !== 'offline').length;
+
+    const card = document.createElement('div');
+    card.className = 'device-card';
+    card.style.animationDelay = (idx * 50) + 'ms';
+    card.onclick = () => openDevice(devKey);
+    card.innerHTML = `
+      <div class="device-header">
+        <span class="state-badge ${stateClass}">${state}</span>
+        <div class="device-name">
+          <div class="device-id">${dev.device}</div>
+          <div class="device-path">${dev.ns}/${dev.client}</div>
+        </div>
+        ${alarmCount > 0 ? `<span class="alarm-pill">⚠ ${alarmCount}</span>` : ''}
+        <span style="color:var(--text3);font-size:12px">›</span>
+      </div>`;
+    list.appendChild(card);
+  });
+
+  showScreen('devices', isBack);
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function renderDashboard(devKey) {
+  const dev = devices[devKey];
+  if (!dev) return;
+  document.getElementById('dashContent').innerHTML = buildDashHTML(dev, devKey);
+  // Initialize charts after DOM is ready
+  setTimeout(() => initCharts(devKey), 50);
+}
+
+function buildDashHTML(dev, devKey) {
+  const state = dev.aiState ? dev.aiState.state : (dev.last['stat/status'] || '—');
+  const stateClass = getStateClass(state);
+
+  // Stats bar
+  const uptime = dev.last['stat/uptime_s'];
+  const rssi   = dev.last['stat/rssi_dbm'];
+  const fw     = dev.last['stat/fw_version'];
+  const hb     = dev.last['stat/hb'];
+  let statsBar = '';
+  if (uptime !== undefined || rssi !== undefined) {
+    statsBar = `<div class="stats-bar" style="margin-bottom:10px">`;
+    if (uptime !== undefined) statsBar += `<span class="stat-chip">⏱ <b>${fmtUptime(uptime)}</b></span>`;
+    if (rssi   !== undefined) statsBar += `<span class="stat-chip">📶 <b>${rssi} dBm</b></span>`;
+    if (fw) statsBar += `<span class="stat-chip">fw <b>${fw}</b></span>`;
+    if (hb !== undefined) statsBar += `<span class="stat-chip">hb <b>${hb}</b></span>`;
+    statsBar += `</div>`;
+  }
+
+  // Header
+  let html = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span class="state-badge ${stateClass}" style="font-size:11px;padding:5px 12px">${state}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:700">${dev.device}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${dev.ns}/${dev.client}</div>
+      </div>
+      <button onclick="requestDiagnosis('${devKey}')"
+        style="background:rgba(0,136,204,.15);border:1px solid rgba(0,136,204,.3);
+               border-radius:8px;color:var(--accent);font-size:11px;font-weight:600;
+               padding:7px 12px;cursor:pointer;flex-shrink:0;white-space:nowrap"
+        id="diagBtn_${devKey.replace(/\//g,'_')}">
+        🔍 Diagnosticar
+      </button>
+    </div>
+    ${statsBar}`;
+
+  // Alarms
+  const activeAlarms = Object.entries(dev.alarms).filter(([k]) => k !== 'offline');
+  html += `<div class="sec-hdr">Alarmas</div>`;
+  html += `<div id="alarmSection_${devKey.replace(/\//g,'_')}">`;
+  if (activeAlarms.length === 0) {
+    html += `<div class="no-alarm">✓ Sin alarmas activas</div>`;
+  } else {
+    activeAlarms.forEach(([key, data]) => {
+      const dur = Math.round((Date.now() - data.ts) / 60000);
+      html += `<div class="alarm-row">
+        <span>⚠</span>
+        <span class="alarm-key">${ALARM_LABELS[key] || key}</span>
+        <span class="alarm-dur">${dur} min</span>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+
+  // Digital I/O tiles
+  // ── Render each section from the guide ──────────────────────────
+  SECTIONS.forEach(sec => {
+    // Get all vars for this section, with value (or undefined if not yet received)
+    const items = sec.vars.map(v => ({
+      key: v.k, val: dev.last[v.k], cfg: v
+    }));
+
+    // Only show section if at least one var has been received
+    const hasAny = items.some(item => item.val !== undefined);
+    if (!hasAny) return;
+
+    html += `<div class="sec-hdr">${sec.label}</div><div class="tiles" id="sec_${sec.key}">`;
+    items.forEach(item => {
+      html += renderTile(item);
+    });
+    html += `</div>`;
+  });
+
+  // ── Unknown vars received from device not in guide ──────────────
+  const knownKeys = new Set(Object.keys(LABELS));
+  const unknownAnalog = Object.keys(dev.last).filter(k =>
+    !knownKeys.has(k) &&
+    (k.startsWith('tele/') || k.startsWith('stat/')) &&
+    !k.includes('hb') && !k.includes('state_code') && !k.includes('params')
+  );
+  if (unknownAnalog.length > 0) {
+    html += `<div class="sec-hdr">Otros (no catalogados)</div><div class="tiles">`;
+    unknownAnalog.forEach(k => {
+      const val = dev.last[k];
+      const num = parseFloat(val);
+      html += renderTile({
+        key: k,
+        val: val,
+        cfg: {
+          label: k.split('/').pop().replace(/_/g,' '),
+          type: (!isNaN(num) && val !== '' && val !== null) ? 'analog' : 'text',
+          unit: ''
+        }
+      });
+    });
+    html += `</div>`;
+  }
+
+    // Charts for analog vars that have history
+  const chartVars = Object.keys(dev.history).filter(k => dev.history[k].length > 1);
+  if (chartVars.length > 0) {
+    html += `<div class="sec-hdr" data-sec="charts">Gráficos (última hora)</div>`;
+    chartVars.forEach(varKey => {
+      const lcfg = LABELS[varKey] || {};
+      const latest = dev.history[varKey].slice(-1)[0];
+      const latestVal = latest ? latest.v.toFixed(2) : '—';
+      html += `<div class="chart-wrap" id="cw_${devKey}_${varKey.replace(/\//g,'_')}">
+        <div class="chart-title">
+          ${lcfg.label || varKey}
+          <span>${latestVal} ${lcfg.unit || ''}</span>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="ch_${devKey}_${varKey.replace(/\//g,'_')}"></canvas>
+        </div>
+      </div>`;
+    });
+  }
+
+  // AI Diagnosis — uses ai/report if available, else ai/state signals
+  const rawReport = dev.aiReport || null;
+  const analysis  = rawReport ? (rawReport.analysis || rawReport) : null;
+  const primary   = analysis ? (analysis.primary_diagnosis || null) : null;
+  const diags     = analysis ? (analysis.diagnostics || []) : [];
+  const kpis      = analysis ? (analysis.kpis || {}) : {};
+  const aiSt      = dev.aiState || null;
+
+  // Determine overall health
+  const hasAlarms  = Object.keys(dev.alarms).filter(k => k !== 'offline').length > 0;
+  const devState   = dev.aiState ? dev.aiState.state : (dev.last['stat/status'] || '');
+  const isRunning  = devState === 'RUNNING';
+  const isIdle     = devState === 'IDLE';
+  const allOk      = !hasAlarms && (isRunning || isIdle) && !primary;
+
+  html += `<div class="sec-hdr">Diagnóstico IA</div>`;
+
+  if (primary) {
+    // Full diagnosis from ai/report
+    const score = primary.score || 0;
+    const sev   = (primary.severity || 'INFO').toLowerCase();
+    const sevCls = sev === 'alarm' ? 'alarm' : sev === 'warn' ? 'warn' : 'info';
+    const bc = primary.because || [];
+    const ac = primary.actions || [];
+    const rw = primary.resolve_when || [];
+    html += `<div class="diag-box">
+      <div class="diag-header">
+        <div class="diag-title">${primary.title || '—'}</div>
+        <span class="diag-badge db-${sevCls}">~${score}%</span>
+      </div>
+      ${bc.length > 0 ? '<div style="margin-bottom:5px">' + bc.slice(0,5).map(b=>`<div class="diag-ev">${b}</div>`).join('') + '</div>' : ''}
+      ${ac.length > 0 ? '<hr class="diag-sep"><div>' + ac.slice(0,4).map(a=>`<div class="diag-act">${a}</div>`).join('') + '</div>' : ''}
+      ${rw.length > 0 ? '<hr class="diag-sep"><div style="font-size:10px;color:var(--text3);margin-top:4px">' + rw.slice(0,2).map(r=>`<div style="padding:1px 0 1px 12px;position:relative"><span style="position:absolute;left:0;color:var(--green)">✓</span>${r}</div>`).join('') + '</div>' : ''}
+    </div>`;
+
+    // Show secondary diagnoses if available
+    if (diags.length > 1) {
+      html += '<div style="margin-top:6px">';
+      diags.slice(1,3).filter(d => d.score >= 50).forEach(d => {
+        const sc = d.score || 0;
+        const sv = (d.severity||'INFO').toLowerCase();
+        html += `<div class="diag-box" style="margin-top:6px;opacity:.8">
+          <div class="diag-header">
+            <div class="diag-title" style="font-size:12px">${d.title||'—'}</div>
+            <span class="diag-badge db-${sv==='alarm'?'alarm':sv==='warn'?'warn':'info'}" style="font-size:8px">~${sc}%</span>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+  } else if (aiSt) {
+    // No full report yet — show state summary from ai/state
+    const st      = aiSt.state || '—';
+    const sigs    = aiSt.signals || {};
+    const openAlm = aiSt.open_alarms || [];
+    const dedic   = aiSt.dedicated || {};
+    const learn   = aiSt.learn || {};
+
+    html += `<div class="diag-box">
+      <div class="diag-header">
+        <div class="diag-title">Motor activo — estado en tiempo real</div>
+        <span class="diag-badge db-info">${st}</span>
+      </div>`;
+
+    // Show open alarms from ai/state
+    if (openAlm.length > 0) {
+      html += '<hr class="diag-sep">';
+      openAlm.slice(0,4).forEach(a => {
+        const dur = a.set_ts ? Math.round((Date.now()/1000 - a.set_ts)/60) : '?';
+        html += `<div class="diag-ev" style="color:var(--red)">⚠ ${ALARM_LABELS[a.alarm_key] || a.alarm_key} (${dur} min)</div>`;
+      });
+    }
+
+    // Key signals
+    const sigItems = [];
+    if (sigs.run !== null && sigs.run !== undefined)          sigItems.push('run=' + sigs.run);
+    if (sigs.tank_demand !== null && sigs.tank_demand !== undefined) sigItems.push('demanda=' + sigs.tank_demand);
+    if (sigs.cistern_ok !== null && sigs.cistern_ok !== undefined)   sigItems.push('cisterna=' + sigs.cistern_ok);
+    if (sigs.pressure_ok !== null && sigs.pressure_ok !== undefined) sigItems.push('presión=' + sigs.pressure_ok);
+    if (sigs.flow_lpm !== null && sigs.flow_lpm !== undefined)       sigItems.push('caudal=' + parseFloat(sigs.flow_lpm).toFixed(2) + ' L/min');
+
+    if (sigItems.length > 0) {
+      html += '<hr class="diag-sep">';
+      sigItems.forEach(s => { html += `<div class="diag-ev">${s}</div>`; });
+    }
+
+    // Dedicated mode info
+    if (dedic.enabled) {
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--accent)">🔴 IA dedicada activa${dedic.auto_control ? ' · auto-control ON' : ''}</div>`;
+    }
+
+    // Learn progress
+    if (learn.running) {
+      const pct = learn.target_prod_s > 0 ? Math.round(learn.prod_accum_s / learn.target_prod_s * 100) : 0;
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--yellow)">📊 Aprendiendo baseline: ${pct}%</div>`;
+    }
+
+    html += `<hr class="diag-sep"><div style="font-size:10px;color:var(--text3);margin-top:4px">
+      Para diagnóstico completo, generá un informe desde la app IA en la PC.
+    </div></div>`;
+
+  } else if (allOk) {
+    // Everything is fine — show positive summary
+    const run_s  = dev.last['stat/uptime_s'];
+    const flow   = dev.last['tele/flow_perm_lpm'] || dev.last['tele/flow_lpm'];
+    const cond   = dev.last['tele/cond_perm_us'];
+    const reject = kpis.ro_rejection_ratio;
+    html += `<div class="diag-box" style="background:rgba(0,230,118,.05);border-color:rgba(0,230,118,.2)">
+      <div class="diag-header">
+        <div class="diag-title" style="color:var(--green)">✓ Operación normal</div>
+        <span class="diag-badge" style="background:rgba(0,230,118,.15);color:var(--green)">${devState}</span>
+      </div>
+      <div style="margin-top:6px">
+        ${flow !== undefined ? `<div class="diag-ev">Caudal: ${parseFloat(flow).toFixed(2)} L/min</div>` : ''}
+        ${cond !== undefined ? `<div class="diag-ev">Conductividad permeado: ${parseFloat(cond).toFixed(1)} µS/cm</div>` : ''}
+        ${reject !== undefined ? `<div class="diag-ev">Rechazo de sales: ${(reject*100).toFixed(1)}%</div>` : ''}
+        ${run_s !== undefined ? `<div class="diag-ev">Uptime: ${fmtUptime(run_s)}</div>` : ''}
+      </div>
+      ${rawReport ? '' : '<hr class="diag-sep"><div style="font-size:10px;color:var(--text3)">Generá un informe desde la PC para diagnóstico detallado.</div>'}
+    </div>`;
+
+  } else if (aiSt) {
+    // No full report yet — show state summary from ai/state
+    const st      = aiSt.state || '—';
+    const sigs    = aiSt.signals || {};
+    const openAlm = aiSt.open_alarms || [];
+    const dedic   = aiSt.dedicated || {};
+    const learn   = aiSt.learn || {};
+    html += `<div class="diag-box">
+      <div class="diag-header">
+        <div class="diag-title">Motor activo — estado en tiempo real</div>
+        <span class="diag-badge db-info">${st}</span>
+      </div>`;
+    if (openAlm.length > 0) {
+      html += '<hr class="diag-sep">';
+      openAlm.slice(0,4).forEach(a => {
+        const dur = a.set_ts ? Math.round((Date.now()/1000 - a.set_ts)/60) : '?';
+        html += `<div class="diag-ev" style="color:var(--red)">⚠ ${ALARM_LABELS[a.alarm_key] || a.alarm_key} (${dur} min)</div>`;
+      });
+    }
+    const sigItems = [];
+    if (sigs.run !== null && sigs.run !== undefined)           sigItems.push('run=' + sigs.run);
+    if (sigs.tank_demand !== undefined)  sigItems.push('demanda=' + sigs.tank_demand);
+    if (sigs.cistern_ok  !== undefined)  sigItems.push('cisterna=' + sigs.cistern_ok);
+    if (sigs.pressure_ok !== undefined)  sigItems.push('presión=' + sigs.pressure_ok);
+    if (sigs.flow_lpm    !== undefined)  sigItems.push('caudal=' + parseFloat(sigs.flow_lpm).toFixed(2) + ' L/min');
+    if (sigItems.length > 0) {
+      html += '<hr class="diag-sep">';
+      sigItems.forEach(s => { html += `<div class="diag-ev">${s}</div>`; });
+    }
+    if (dedic.enabled) {
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--accent)">🔴 IA dedicada activa</div>`;
+    }
+    if (learn.running) {
+      const pct = learn.target_prod_s > 0 ? Math.round(learn.prod_accum_s / learn.target_prod_s * 100) : 0;
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--yellow)">📊 Aprendiendo baseline: ${pct}%</div>`;
+    }
+    html += `<hr class="diag-sep"><div style="font-size:10px;color:var(--text3);margin-top:4px">
+      Presioná 🔍 Diagnosticar para diagnóstico completo.
+    </div></div>`;
+
+  } else {
+    html += `<div class="diag-box" style="opacity:.5">
+      <div class="diag-title">Motor IA no conectado</div>
+    </div>`;
+  }
+
+  // Raw topics (tech mode)
+  if (loginCfg && loginCfg.techMode) {
+    const entries = Object.entries(dev.last).sort();
+    html += `<div class="sec-hdr" style="margin-top:14px">Topics crudos</div>
+    <div class="raw-toggle" onclick="this.nextSibling.classList.toggle('vis');this.textContent=this.nextSibling.classList.contains('vis')?'▼ ocultar topics crudos':'▶ ver topics crudos (${entries.length})'">▶ ver topics crudos (${entries.length})</div>
+    <div class="raw-table">
+    ${entries.map(([k,v])=>`<div class="raw-row"><span class="raw-k">${k}</span><span class="raw-v">${typeof v==='object'?JSON.stringify(v).slice(0,50):String(v)}</span></div>`).join('')}
+    </div>`;
+  }
+
+  return html;
+}
+
+function buildTiles(dev, filterFn) {
+  // Legacy helper — still used by partialUpdateTile
+  return Object.entries(LABELS)
+    .filter(([k, cfg]) => !cfg.hide && filterFn(cfg))
+    .map(([k, cfg]) => ({ key: k, val: dev.last[k], cfg }));
+}
+
+function renderTile(t) {
+  const { key, val, cfg } = t;
+  const safeKey = key.replace(/\//g,'_');
+  const hasVal  = val !== undefined && val !== null && val !== '';
+
+  // ── DIMMED tile: variable known but no data yet ──
+  if (!hasVal) {
+    const isDig = cfg.type === 'digital';
+    return `<div class="tile t-off" id="tile_${safeKey}" style="opacity:.35">
+      <div class="tile-label">${cfg.label}</div>
+      ${isDig
+        ? `<div class="dig-row"><div class="dig-led" style="background:var(--border2)"></div><div class="dig-label off">—</div></div>`
+        : `<div class="tile-val" style="font-size:15px;color:var(--text3)">—<span class="tile-unit">${cfg.unit||''}</span></div>`
+      }
+    </div>`;
+  }
+
+  let cls = 'tile';
+  let inner = '';
+
+  if (cfg.type === 'digital') {
+    const isOn    = (val == 1 || val === true || val === 'true');
+    const isAlarm = cfg.invert ? isOn : false;
+    cls += isAlarm ? ' t-alarm' : (isOn ? ' t-on' : ' t-off');
+    const ledCls = isAlarm ? 'led-alarm' : (isOn ? 'led-on' : 'led-off');
+    const lblCls = isAlarm ? 'alarm' : (isOn ? 'on' : 'off');
+    inner = `<div class="tile-label">${cfg.label}</div>
+      <div class="dig-row">
+        <div class="dig-led ${ledCls}" id="led_${safeKey}"></div>
+        <div class="dig-label ${lblCls}" id="dv_${safeKey}">${isOn ? 'ON' : 'OFF'}</div>
+      </div>`;
+
+  } else if (cfg.type === 'analog') {
+    const num = parseFloat(val);
+    const fmt = isNaN(num) ? String(val) : (num < 10 ? num.toFixed(2) : num.toFixed(1));
+    cls += ' t-analog';
+    inner = `<div class="tile-label">${cfg.label}</div>
+      <div class="tile-val big" id="av_${safeKey}">${fmt}<span class="tile-unit">${cfg.unit||''}</span></div>`;
+
+  } else if (cfg.type === 'number') {
+    cls += ' t-text';
+    inner = `<div class="tile-label">${cfg.label}</div>
+      <div class="tile-val" id="av_${safeKey}">${val}</div>`;
+
+  } else {
+    cls += ' t-text';
+    inner = `<div class="tile-label">${cfg.label}</div>
+      <div class="tile-val" style="font-size:13px" id="av_${safeKey}">${val}</div>`;
+  }
+
+  return `<div class="${cls}" id="tile_${safeKey}">${inner}</div>`;
+}
+
+function partialUpdateTile(fullKey, val) {
+  const safeKey = fullKey.replace(/\//g,'_');
+  const cfg = LABELS[fullKey];
+  if (!cfg) return;
+
+  const tile = document.getElementById('tile_' + safeKey);
+
+  if (!tile) {
+    // Tile doesn't exist yet — this var just arrived for the first time
+    // Find the section container and add it, or do a targeted section update
+    addTileToSection(fullKey, val, cfg);
+    return;
+  }
+
+  // Tile exists — update in-place (fast, no re-render)
+  if (cfg.type === 'digital') {
+    const isOn    = (val == 1 || val === true || val === 'true');
+    const isAlarm = cfg.invert ? isOn : false;
+    tile.className = 'tile ' + (isAlarm ? 't-alarm' : isOn ? 't-on' : 't-off');
+    tile.style.opacity = '';
+    const led = document.getElementById('led_' + safeKey);
+    const dv  = document.getElementById('dv_'  + safeKey);
+    if (led) led.className = 'dig-led ' + (isAlarm ? 'led-alarm' : isOn ? 'led-on' : 'led-off');
+    if (dv)  { dv.className = 'dig-label ' + (isAlarm ? 'alarm' : isOn ? 'on' : 'off'); dv.textContent = isOn ? 'ON' : 'OFF'; }
+  } else {
+    tile.style.opacity = '';
+    const av = document.getElementById('av_' + safeKey);
+    if (av) {
+      if (cfg.type === 'analog') {
+        const num = parseFloat(val);
+        const fmt = isNaN(num) ? String(val) : (num < 10 ? num.toFixed(2) : num.toFixed(1));
+        av.innerHTML = fmt + `<span class="tile-unit">${cfg.unit||''}</span>`;
+      } else {
+        av.textContent = val;
+      }
+    }
+  }
+}
+
+function addTileToSection(fullKey, val, cfg) {
+  // Find the section this var belongs to
+  const sec = SECTIONS.find(s => s.vars.some(v => v.k === fullKey));
+  if (!sec) return;
+
+  const secId = 'sec_' + sec.key;
+  let tilesDiv = document.getElementById(secId);
+
+  if (!tilesDiv) {
+    // Section doesn't exist yet — create it
+    const dashContent = document.getElementById('dashContent');
+    if (!dashContent) return;
+    // Find the right insertion point (after alarms, before charts)
+    const chartsHdr = dashContent.querySelector('[data-sec="charts"]');
+    const secHtml = `<div class="sec-hdr">${sec.label}</div><div class="tiles" id="${secId}"></div>`;
+    if (chartsHdr) {
+      chartsHdr.insertAdjacentHTML('beforebegin', secHtml);
+    } else {
+      dashContent.insertAdjacentHTML('beforeend', secHtml);
+    }
+    tilesDiv = document.getElementById(secId);
+  }
+
+  if (tilesDiv) {
+    tilesDiv.insertAdjacentHTML('beforeend', renderTile({ key: fullKey, val, cfg }));
+  }
+}
+
+function updateAlarmSection(devKey) {
+  // Update just the alarms part of the dashboard without full re-render
+  const dev = devices[devKey];
+  if (!dev) return;
+  const alarmDiv = document.getElementById('alarmSection_' + devKey.replace(/\//g,'_'));
+  if (!alarmDiv) { renderDashboard(devKey); return; } // fallback
+
+  const activeAlarms = Object.entries(dev.alarms).filter(([k]) => k !== 'offline');
+  if (activeAlarms.length === 0) {
+    alarmDiv.innerHTML = `<div class="no-alarm">✓ Sin alarmas activas</div>`;
+  } else {
+    alarmDiv.innerHTML = activeAlarms.map(([key, data]) => {
+      const dur = Math.round((Date.now() - data.ts) / 60000);
+      return `<div class="alarm-row"><span>⚠</span>
+        <span class="alarm-key">${ALARM_LABELS[key] || key}</span>
+        <span class="alarm-dur">${dur} min</span></div>`;
+    }).join('');
+  }
+}
+
+function updateStateBadge(devKey) {
+  const dev = devices[devKey];
+  if (!dev) return;
+  const state = dev.aiState ? dev.aiState.state : (dev.last['stat/status'] || '—');
+  const badge = document.querySelector('#dashContent .state-badge');
+  if (badge) {
+    badge.textContent = state;
+    badge.className = 'state-badge ' + getStateClass(state);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════
+function initCharts(devKey) {
+  const dev = devices[devKey];
+  if (!dev) return;
+
+  Object.keys(dev.history).forEach(varKey => {
+    const canvasId = 'ch_' + devKey + '_' + varKey.replace(/\//g,'_');
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    if (charts[canvasId]) { charts[canvasId].destroy(); }
+
+    const data = dev.history[varKey];
+    const color = CHART_COLORS[varKey] || '#00d4ff';
+    const lcfg  = LABELS[varKey] || {};
+
+    charts[canvasId] = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: data.map(p => fmtTime(p.t)),
+        datasets: [{
+          data: data.map(p => p.v),
+          borderColor: color,
+          backgroundColor: color + '15',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.3,
+        }]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          mode: 'index', intersect: false,
+          backgroundColor: 'rgba(14,21,37,0.95)',
+          titleColor: '#7a9cc4', bodyColor: '#e2ecff',
+          borderColor: '#1e2d45', borderWidth: 1,
+          callbacks: { label: ctx => `${ctx.parsed.y.toFixed(2)} ${lcfg.unit||''}` }
+        }},
+        scales: {
+          x: { display: false },
+          y: {
+            display: true,
+            grid: { color: 'rgba(30,45,69,0.6)', drawBorder: false },
+            ticks: { color: '#3d5470', font: { size: 9, family: "'JetBrains Mono'" }, maxTicksLimit: 4 },
+            border: { display: false },
+          }
+        },
+        interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      }
+    });
+  });
+}
+
+function updateChart(devKey, varKey) {
+  if (currentDevKey !== devKey) return;
+  const canvasId = 'ch_' + devKey + '_' + varKey.replace(/\//g,'_');
+  const chart = charts[canvasId];
+  const dev = devices[devKey];
+  if (!chart || !dev) {
+    // Chart may not exist yet if this is the first data — schedule a re-render
+    if (currentDevKey === devKey && !document.getElementById(canvasId)) {
+      renderDashboard(devKey);
+    }
+    return;
+  }
+  const data = dev.history[varKey];
+  chart.data.labels = data.map(p => fmtTime(p.t));
+  chart.data.datasets[0].data = data.map(p => p.v);
+  chart.update('none');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ALARMS SCREEN
+// ═══════════════════════════════════════════════════════════
+function renderAlarmsScreen() {
+  const allAlarms = [];
+  Object.values(devices).forEach(dev => {
+    Object.entries(dev.alarms).forEach(([key, data]) => {
+      if (key === 'offline') return;
+      allAlarms.push({ dev, key, data });
+    });
+  });
+
+  let html = '<div class="screen-title">Alarmas activas</div>';
+  if (allAlarms.length === 0) {
+    html += `<div class="empty"><div class="empty-icon">✅</div><h3>Sin alarmas</h3><p>Todos los equipos operan sin alertas.</p></div>`;
+  } else {
+    html += '<div class="alarm-list">';
+    allAlarms.forEach(({ dev, key, data }) => {
+      const dur = Math.round((Date.now() - data.ts) / 60000);
+      html += `<div class="alarm-row" onclick="openDevice('${dev.ns}/${dev.client}/${dev.device}')">
+        <span>⚠</span>
+        <div style="flex:1;min-width:0">
+          <div class="alarm-key">${ALARM_LABELS[key] || key}</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${dev.ns}/${dev.client}/${dev.device}</div>
+        </div>
+        <span class="alarm-dur">${dur} min</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  const screen = document.getElementById('screenClients');
+  screen.innerHTML = html;
+  showScreen('clients');
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG SCREEN
+// ═══════════════════════════════════════════════════════════
+function renderConfigScreen() {
+  const devCount = Object.keys(devices).length;
+  const connInfo = loginCfg || {};
+
+  let shareLinks = '';
+  if (!connInfo.techMode) {
+    Object.values(devices).forEach(dev => {
+      const code = Object.entries(CLIENT_CODES).find(([c, cfg]) => cfg.clientFilter === dev.client);
+      const link = `${location.href.split('?')[0]}?code=${code ? code[0] : ''}`;
+      shareLinks += `<div class="client-card" style="cursor:default" onclick="copyText('${link}')">
+        <div class="client-header">
+          <div class="client-info">
+            <div class="client-name">${dev.device}</div>
+            <div class="client-meta">${dev.ns}/${dev.client}/${dev.device}</div>
+          </div>
+          <span style="font-size:11px;color:var(--text3)">📋 copiar link</span>
+        </div>
+      </div>`;
+    });
+  }
+
+  const screen = document.getElementById('screenClients');
+  screen.innerHTML = `
+    <div class="screen-title">Configuración</div>
+    <div class="client-card" style="cursor:default;margin-bottom:16px">
+      <div class="client-header">
+        <div class="client-info">
+          <div class="client-name">Conexión activa</div>
+          <div class="client-meta">${connInfo.host}:${connInfo.port}</div>
+        </div>
+        <span class="client-stat-chip online">● conectado</span>
+      </div>
+      <div class="client-stats">
+        <span class="client-stat-chip">user: ${connInfo.user}</span>
+        <span class="client-stat-chip">${devCount} equipos detectados</span>
+        <span class="client-stat-chip">${connInfo.techMode ? 'modo técnico' : 'modo cliente'}</span>
+      </div>
+    </div>
+    ${shareLinks ? `<div class="screen-title">Links para clientes</div>${shareLinks}` : ''}
+    <button class="login-btn" style="max-width:400px;margin-top:16px" onclick="doLogout()">Cerrar sesión</button>`;
+
+  showScreen('clients');
+}
+
+function doLogout() {
+  if (mqtt && mqtt.isConnected()) mqtt.disconnect();
+  mqtt = null; devices = {}; loginCfg = null; charts = {};
+  document.getElementById('bottomNav').classList.remove('vis');
+  document.getElementById('btnBack').classList.remove('vis');
+  setConn('off', 'desconectado');
+  devices = {};
+  // Restore login screen
+  const _ls = document.getElementById('screenLogin');
+  const _lt = document.getElementById('loginTopbar');
+  const _at = document.getElementById('appTopbar');
+  if (_ls) { _ls.style.display = ''; _ls.classList.remove('active'); }
+  if (_lt) _lt.style.display = 'flex';
+  if (_at) _at.style.display = 'none';
+  showScreen('login', true);
+  window.scrollTo(0, 0);
+}
+
+function copyText(txt) {
+  navigator.clipboard.writeText(txt).then(() => alert('Link copiado:\n' + txt));
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+function setConn(state, label) {
+  const b = document.getElementById('connBadge');
+  b.style.display = 'flex';
+  b.className = 'conn-badge ' + (state === 'on' ? 'on' : state === 'ing' ? 'ing' : '');
+  document.getElementById('connLabel').textContent = label;
+}
+
+function getStateClass(state) {
+  const s = String(state).toUpperCase();
+  const map = { 'RUNNING':'s-RUNNING','IDLE':'s-IDLE','STARTING':'s-STARTING',
+    'OFFLINE':'s-OFFLINE','LEARNING':'s-LEARNING','WAIT_CISTERN':'s-WAIT_CISTERN' };
+  return map[s] || 's-default';
+}
+
+function requestDiagnosis(devKey) {
+  if (!mqtt || !mqtt.isConnected()) {
+    alert('Sin conexión al broker');
+    return;
+  }
+  const dev = devices[devKey];
+  if (!dev) return;
+
+  // Show loading state on button
+  const btn = document.getElementById('diagBtn_' + devKey.replace(/\//g,'_'));
+  if (btn) {
+    btn.textContent = '⏳ Solicitando…';
+    btn.disabled = true;
+    setTimeout(() => {
+      if (btn) { btn.textContent = '🔍 Diagnosticar'; btn.disabled = false; }
+    }, 8000);
+  }
+
+  // Publish cmd/report to the device topic — IA will respond with ai/report
+  const topic = dev.ns + '/' + dev.client + '/' + dev.device + '/cmd/report';
+  const payload = JSON.stringify({
+    sections: { production: 1, alarms: 1, timeline: 0, diagnosis: 1 }
+  });
+  mqtt.publish(topic, payload, 1, false);
+  console.log('[PWA] Diagnosis requested:', topic);
+}
+
+function fmtUptime(s) {
+  s = parseInt(s) || 0;
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  if (h > 24) return `${Math.floor(h/24)}d ${h%24}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m ${s%60}s`;
+}
+
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
+// ═══════════════════════════════════════════════════════════
+// URL CODE AUTO-LOGIN
+// ═══════════════════════════════════════════════════════════
+// Show login screen on load
+showScreen('login');
+
+// Auto-login from URL ?code=XXXXX
+const urlCode = new URLSearchParams(location.search).get('code');
+if (urlCode) {
+  document.getElementById('accessCode').value = urlCode.toUpperCase();
+  // Wait for clients.json to load, then login
+  loadClientCodes().then(() => {
+    if (CLIENT_CODES[urlCode.toUpperCase()]) {
+      setTimeout(doLogin, 100);
+    }
+  });
+} else {
+  // Pre-load codes in background so first login is instant
+  loadClientCodes();
+}
+</script>
+</body>
+</html>
