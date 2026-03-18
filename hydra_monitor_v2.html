@@ -854,12 +854,14 @@ function onMsg(msg) {
     const v = parseInt(payload);
     if (v === 1) dev.alarms[key] = { ts: Date.now() };
     else delete dev.alarms[key];
-    refreshClientCard(client);
-    if (currentDevKey === devKey) renderDashboard(devKey);
+    if (activeNav === 'clients') refreshClientCard(client);
+    // Alarm changed — update alarm section only, not full dashboard
+    if (currentDevKey === devKey) updateAlarmSection(devKey);
 
   } else if (group === 'ai' && key === 'state') {
     try { dev.aiState = JSON.parse(payload); } catch(e){}
-    if (currentDevKey === devKey) renderDashboard(devKey);
+    // Only update the state badge, not full re-render
+    if (currentDevKey === devKey) updateStateBadge(devKey);
 
   } else if (group === 'ai' && key === 'report') {
     // Only store if valid JSON object with analysis data (ignore plain text payloads)
@@ -898,10 +900,17 @@ function onMsg(msg) {
       }
     }
 
-    // Refresh UI
-    refreshClientCard(client);
+    // Update tile in open dashboard (fast, no re-render)
     if (currentDevKey === devKey) partialUpdateTile(fullKey, val);
-    if (activeNav === 'clients') refreshClientsList();
+
+    // Update client card only if in clients view (throttled)
+    if (activeNav === 'clients') {
+      const now = Date.now();
+      if (!dev._lastCardUpdate || now - dev._lastCardUpdate > 2000) {
+        dev._lastCardUpdate = now;
+        refreshClientCard(client);
+      }
+    }
   }
 }
 
@@ -1143,10 +1152,10 @@ function buildDashHTML(dev, devKey) {
   // Alarms
   const activeAlarms = Object.entries(dev.alarms).filter(([k]) => k !== 'offline');
   html += `<div class="sec-hdr">Alarmas</div>`;
+  html += `<div id="alarmSection_${devKey.replace(/\//g,'_')}">`;
   if (activeAlarms.length === 0) {
     html += `<div class="no-alarm">✓ Sin alarmas activas</div>`;
   } else {
-    html += `<div class="alarm-list">`;
     activeAlarms.forEach(([key, data]) => {
       const dur = Math.round((Date.now() - data.ts) / 60000);
       html += `<div class="alarm-row">
@@ -1155,8 +1164,8 @@ function buildDashHTML(dev, devKey) {
         <span class="alarm-dur">${dur} min</span>
       </div>`;
     });
-    html += `</div>`;
   }
+  html += `</div>`;
 
   // Digital I/O tiles
   // ── Render each section from the guide ──────────────────────────
@@ -1170,7 +1179,7 @@ function buildDashHTML(dev, devKey) {
     const hasAny = items.some(item => item.val !== undefined);
     if (!hasAny) return;
 
-    html += `<div class="sec-hdr">${sec.label}</div><div class="tiles">`;
+    html += `<div class="sec-hdr">${sec.label}</div><div class="tiles" id="sec_${sec.key}">`;
     items.forEach(item => {
       html += renderTile(item);
     });
@@ -1205,7 +1214,7 @@ function buildDashHTML(dev, devKey) {
     // Charts for analog vars that have history
   const chartVars = Object.keys(dev.history).filter(k => dev.history[k].length > 1);
   if (chartVars.length > 0) {
-    html += `<div class="sec-hdr">Gráficos (última hora)</div>`;
+    html += `<div class="sec-hdr" data-sec="charts">Gráficos (última hora)</div>`;
     chartVars.forEach(varKey => {
       const lcfg = LABELS[varKey] || {};
       const latest = dev.history[varKey].slice(-1)[0];
@@ -1464,38 +1473,100 @@ function renderTile(t) {
 }
 
 function partialUpdateTile(fullKey, val) {
-  // Try to update just the value in the tile without full re-render
   const safeKey = fullKey.replace(/\//g,'_');
   const cfg = LABELS[fullKey];
-  if (!cfg || cfg.hide) return;
+  if (!cfg) return;
 
+  const tile = document.getElementById('tile_' + safeKey);
+
+  if (!tile) {
+    // Tile doesn't exist yet — this var just arrived for the first time
+    // Find the section container and add it, or do a targeted section update
+    addTileToSection(fullKey, val, cfg);
+    return;
+  }
+
+  // Tile exists — update in-place (fast, no re-render)
   if (cfg.type === 'digital') {
-    const isOn = (val == 1 || val === true || val === 'true');
-    const led = document.getElementById('led_' + safeKey);
-    const dv  = document.getElementById('dv_' + safeKey);
-    const tile = document.getElementById('tile_' + safeKey);
-    if (!led || !dv) return;
+    const isOn    = (val == 1 || val === true || val === 'true');
     const isAlarm = cfg.invert ? isOn : false;
-    led.className = 'dig-led ' + (isAlarm ? 'led-alarm' : isOn ? 'led-on' : 'led-off');
-    dv.className  = 'dig-label ' + (isAlarm ? 'alarm' : isOn ? 'on' : 'off');
-    dv.textContent = isOn ? 'ON' : 'OFF';
-    if (tile) {
-      tile.className = 'tile ' + (isAlarm ? 't-alarm' : isOn ? 't-on' : 't-off');
-    }
+    tile.className = 'tile ' + (isAlarm ? 't-alarm' : isOn ? 't-on' : 't-off');
+    tile.style.opacity = '';
+    const led = document.getElementById('led_' + safeKey);
+    const dv  = document.getElementById('dv_'  + safeKey);
+    if (led) led.className = 'dig-led ' + (isAlarm ? 'led-alarm' : isOn ? 'led-on' : 'led-off');
+    if (dv)  { dv.className = 'dig-label ' + (isAlarm ? 'alarm' : isOn ? 'on' : 'off'); dv.textContent = isOn ? 'ON' : 'OFF'; }
   } else {
+    tile.style.opacity = '';
     const av = document.getElementById('av_' + safeKey);
-    if (!av) {
-      // Tile doesn't exist yet — need full re-render
-      if (currentDevKey) renderDashboard(currentDevKey);
-      return;
+    if (av) {
+      if (cfg.type === 'analog') {
+        const num = parseFloat(val);
+        const fmt = isNaN(num) ? String(val) : (num < 10 ? num.toFixed(2) : num.toFixed(1));
+        av.innerHTML = fmt + `<span class="tile-unit">${cfg.unit||''}</span>`;
+      } else {
+        av.textContent = val;
+      }
     }
-    if (cfg.type === 'analog') {
-      const num = parseFloat(val);
-      const fmt = isNaN(num) ? val : (num < 10 ? num.toFixed(2) : num.toFixed(1));
-      av.innerHTML = fmt + `<span class="tile-unit">${cfg.unit||''}</span>`;
+  }
+}
+
+function addTileToSection(fullKey, val, cfg) {
+  // Find the section this var belongs to
+  const sec = SECTIONS.find(s => s.vars.some(v => v.k === fullKey));
+  if (!sec) return;
+
+  const secId = 'sec_' + sec.key;
+  let tilesDiv = document.getElementById(secId);
+
+  if (!tilesDiv) {
+    // Section doesn't exist yet — create it
+    const dashContent = document.getElementById('dashContent');
+    if (!dashContent) return;
+    // Find the right insertion point (after alarms, before charts)
+    const chartsHdr = dashContent.querySelector('[data-sec="charts"]');
+    const secHtml = `<div class="sec-hdr">${sec.label}</div><div class="tiles" id="${secId}"></div>`;
+    if (chartsHdr) {
+      chartsHdr.insertAdjacentHTML('beforebegin', secHtml);
     } else {
-      av.textContent = val;
+      dashContent.insertAdjacentHTML('beforeend', secHtml);
     }
+    tilesDiv = document.getElementById(secId);
+  }
+
+  if (tilesDiv) {
+    tilesDiv.insertAdjacentHTML('beforeend', renderTile({ key: fullKey, val, cfg }));
+  }
+}
+
+function updateAlarmSection(devKey) {
+  // Update just the alarms part of the dashboard without full re-render
+  const dev = devices[devKey];
+  if (!dev) return;
+  const alarmDiv = document.getElementById('alarmSection_' + devKey.replace(/\//g,'_'));
+  if (!alarmDiv) { renderDashboard(devKey); return; } // fallback
+
+  const activeAlarms = Object.entries(dev.alarms).filter(([k]) => k !== 'offline');
+  if (activeAlarms.length === 0) {
+    alarmDiv.innerHTML = `<div class="no-alarm">✓ Sin alarmas activas</div>`;
+  } else {
+    alarmDiv.innerHTML = activeAlarms.map(([key, data]) => {
+      const dur = Math.round((Date.now() - data.ts) / 60000);
+      return `<div class="alarm-row"><span>⚠</span>
+        <span class="alarm-key">${ALARM_LABELS[key] || key}</span>
+        <span class="alarm-dur">${dur} min</span></div>`;
+    }).join('');
+  }
+}
+
+function updateStateBadge(devKey) {
+  const dev = devices[devKey];
+  if (!dev) return;
+  const state = dev.aiState ? dev.aiState.state : (dev.last['stat/status'] || '—');
+  const badge = document.querySelector('#dashContent .state-badge');
+  if (badge) {
+    badge.textContent = state;
+    badge.className = 'state-badge ' + getStateClass(state);
   }
 }
 
