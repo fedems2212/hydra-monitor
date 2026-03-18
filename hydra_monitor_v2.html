@@ -565,26 +565,26 @@ const LABELS = {
   'tele/bomba_alta':       { label:'Bomba alta',        type:'digital', group:'S' },
   'tele/flush_valve':      { label:'Válvula flush',     type:'digital', group:'S' },
   // Caudales
-  'tele/flow_perm_lpm':    { label:'Caudal perm.',      type:'analog', unit:'L/min', chart:true },
-  'tele/flow_rej_lpm':     { label:'Caudal rechazo',    type:'analog', unit:'L/min', chart:true },
-  'tele/flow_feed_lpm':    { label:'Caudal entrada',    type:'analog', unit:'L/min', chart:true },
+  'tele/flow_perm_lpm':    { label:'Caudal perm.',      type:'analog', unit:'L/min', chart:true, group:'proceso' },
+  'tele/flow_rej_lpm':     { label:'Caudal rechazo',    type:'analog', unit:'L/min', chart:true, group:'proceso' },
+  'tele/flow_feed_lpm':    { label:'Caudal entrada',    type:'analog', unit:'L/min', chart:true, group:'proceso' },
   'tele/total_liters':     { label:'Total litros',      type:'analog', unit:'L',    chart:true, group:'proceso' },
   'tele/total_m3':         { label:'Total m³',          type:'analog', unit:'m³', chart:true, group:'proceso' },
   'tele/recovery_pct':     { label:'Recuperación',      type:'analog', unit:'%',  chart:true, group:'proceso' },
   // Presiones
-  'tele/p_feed_bar':       { label:'P. entrada',        type:'analog', unit:'bar', chart:true },
-  'tele/p_high_bar':       { label:'P. alta',           type:'analog', unit:'bar', chart:true },
-  'tele/p_perm_bar':       { label:'P. permeado',       type:'analog', unit:'bar', chart:true },
-  'tele/dp_prefilter_bar': { label:'ΔP prefiltro',      type:'analog', unit:'bar', chart:true },
-  'tele/dp_membrane_bar':  { label:'ΔP membrana',       type:'analog', unit:'bar', chart:true },
+  'tele/p_feed_bar':       { label:'P. entrada',        type:'analog', unit:'bar',   chart:true, group:'presiones' },
+  'tele/p_high_bar':       { label:'P. alta',           type:'analog', unit:'bar',   chart:true, group:'presiones' },
+  'tele/p_perm_bar':       { label:'P. permeado',       type:'analog', unit:'bar',   chart:true, group:'presiones' },
+  'tele/dp_prefilter_bar': { label:'ΔP prefiltro',      type:'analog', unit:'bar',   chart:true, group:'presiones' },
+  'tele/dp_membrane_bar':  { label:'ΔP membrana',       type:'analog', unit:'bar',   chart:true, group:'presiones' },
   // Calidad
-  'tele/cond_feed_us':     { label:'Cond. entrada',     type:'analog', unit:'µS/cm', chart:true },
-  'tele/cond_perm_us':     { label:'Cond. permeado',    type:'analog', unit:'µS/cm', chart:true },
-  'tele/tds_feed_ppm':     { label:'TDS entrada',       type:'analog', unit:'ppm', chart:true },
-  'tele/tds_perm_ppm':     { label:'TDS permeado',      type:'analog', unit:'ppm', chart:true },
-  'tele/temp_c':           { label:'Temperatura',       type:'analog', unit:'°C', chart:true },
-  'tele/ph':               { label:'pH',                type:'analog', unit:'', chart:true },
-  'tele/orp_mv':           { label:'ORP',               type:'analog', unit:'mV', chart:true },
+  'tele/cond_feed_us':     { label:'Cond. entrada',     type:'analog', unit:'µS/cm', chart:true, group:'calidad' },
+  'tele/cond_perm_us':     { label:'Cond. permeado',    type:'analog', unit:'µS/cm', chart:true, group:'calidad' },
+  'tele/tds_feed_ppm':     { label:'TDS entrada',       type:'analog', unit:'ppm',   chart:true, group:'calidad' },
+  'tele/tds_perm_ppm':     { label:'TDS permeado',      type:'analog', unit:'ppm',   chart:true, group:'calidad' },
+  'tele/temp_c':           { label:'Temperatura',       type:'analog', unit:'°C',   chart:true, group:'calidad' },
+  'tele/ph':               { label:'pH',                type:'analog', unit:'',     chart:true, group:'calidad' },
+  'tele/orp_mv':           { label:'ORP',               type:'analog', unit:'mV',   chart:true, group:'calidad' },
   // Contadores
   'tele/pump_hours_low':         { label:'Hrs bomba baja',       type:'analog', unit:'h',   chart:true, group:'contadores' },
   'tele/pump_hours_high':        { label:'Hrs bomba alta',       type:'analog', unit:'h',   chart:true, group:'contadores' },
@@ -1302,6 +1302,50 @@ function buildDashHTML(dev, devKey) {
     </div>`;
 
   } else if (aiSt) {
+    // No full report yet — show state summary from ai/state
+    const st      = aiSt.state || '—';
+    const sigs    = aiSt.signals || {};
+    const openAlm = aiSt.open_alarms || [];
+    const dedic   = aiSt.dedicated || {};
+    const learn   = aiSt.learn || {};
+    html += `<div class="diag-box">
+      <div class="diag-header">
+        <div class="diag-title">Motor activo — estado en tiempo real</div>
+        <span class="diag-badge db-info">${st}</span>
+      </div>`;
+    if (openAlm.length > 0) {
+      html += '<hr class="diag-sep">';
+      openAlm.slice(0,4).forEach(a => {
+        const dur = a.set_ts ? Math.round((Date.now()/1000 - a.set_ts)/60) : '?';
+        html += `<div class="diag-ev" style="color:var(--red)">⚠ ${ALARM_LABELS[a.alarm_key] || a.alarm_key} (${dur} min)</div>`;
+      });
+    }
+    const sigItems = [];
+    if (sigs.run !== null && sigs.run !== undefined)           sigItems.push('run=' + sigs.run);
+    if (sigs.tank_demand !== undefined)  sigItems.push('demanda=' + sigs.tank_demand);
+    if (sigs.cistern_ok  !== undefined)  sigItems.push('cisterna=' + sigs.cistern_ok);
+    if (sigs.pressure_ok !== undefined)  sigItems.push('presión=' + sigs.pressure_ok);
+    if (sigs.flow_lpm    !== undefined)  sigItems.push('caudal=' + parseFloat(sigs.flow_lpm).toFixed(2) + ' L/min');
+    if (sigItems.length > 0) {
+      html += '<hr class="diag-sep">';
+      sigItems.forEach(s => { html += `<div class="diag-ev">${s}</div>`; });
+    }
+    if (dedic.enabled) {
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--accent)">🔴 IA dedicada activa</div>`;
+    }
+    if (learn.running) {
+      const pct = learn.target_prod_s > 0 ? Math.round(learn.prod_accum_s / learn.target_prod_s * 100) : 0;
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--yellow)">📊 Aprendiendo baseline: ${pct}%</div>`;
+    }
+    html += `<hr class="diag-sep"><div style="font-size:10px;color:var(--text3);margin-top:4px">
+      Presioná 🔍 Diagnosticar para diagnóstico completo.
+    </div></div>`;
+
+  } else {
+    html += `<div class="diag-box" style="opacity:.5">
+      <div class="diag-title">Motor IA no conectado</div>
+    </div>`;
+  }
 
   // Raw topics (tech mode)
   if (loginCfg && loginCfg.techMode) {
