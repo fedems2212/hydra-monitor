@@ -381,6 +381,50 @@ body::before {
 @keyframes spin { to{transform:rotate(360deg)} }
 @keyframes flash { 0%{background:rgba(0,212,255,.15)} 100%{background:transparent} }
 
+/* ══ DASHBOARD TABS ══════════════════════════════════════════ */
+.dash-tabs {
+  display: flex; gap: 0; margin-bottom: 14px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden;
+}
+.dash-tab {
+  flex: 1; padding: 10px 8px; border: none; background: none;
+  color: var(--text2); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .2s; letter-spacing: .04em;
+  border-right: 1px solid var(--border);
+}
+.dash-tab:last-child { border-right: none; }
+.dash-tab.active {
+  background: var(--accentd); color: #fff;
+}
+.dash-tab-content { display: none; }
+.dash-tab-content.active { display: block; }
+
+/* ══ COMMANDS ════════════════════════════════════════════════ */
+.cmd-section { margin-top: 4px; }
+.cmd-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+.cmd-btn {
+  padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border2); background: var(--bg3);
+  color: var(--text); transition: all .15s; letter-spacing: .03em;
+  display: flex; align-items: center; gap: 6px;
+}
+.cmd-btn:hover  { background: var(--bg4); border-color: var(--accent2); color: var(--accent); }
+.cmd-btn:active { transform: scale(.97); }
+.cmd-btn.danger { border-color: rgba(255,61,87,.35); color: var(--red); }
+.cmd-btn.danger:hover { background: rgba(255,61,87,.1); }
+.cmd-btn.warn   { border-color: rgba(255,171,64,.35); color: var(--orange); }
+.cmd-btn.warn:hover   { background: rgba(255,171,64,.1); }
+.cmd-btn.success { border-color: rgba(0,230,118,.35); color: var(--green); }
+.cmd-btn.success:hover { background: rgba(0,230,118,.1); }
+.cmd-sent {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  background: var(--bg2); border: 1px solid var(--accentd);
+  border-radius: 8px; padding: 8px 16px; font-size: 12px; color: var(--accent);
+  font-weight: 600; z-index: 500; animation: fadeUp .2s ease;
+  pointer-events: none;
+}
+
 /* ══ RESPONSIVE ══════════════════════════════════════════════ */
 @media (min-width:560px) {
   #screenClients, #screenDevices, #screenDashboard { max-width: 640px; margin: 0 auto; }
@@ -1215,6 +1259,20 @@ function buildDashHTML(dev, devKey) {
   html += `</div>`;
 
   // Digital I/O tiles
+  // ── TAB SYSTEM ────────────────────────────────────────────────
+  const _devKeySafe = devKey.replace(/\//g,'_');
+  html += `<div class="dash-tabs">
+    <button class="dash-tab active" id="tab_sig_${_devKeySafe}"
+      onclick="switchDashTab('${_devKeySafe}','signals')">📊 Señales</button>
+    <button class="dash-tab" id="tab_cmd_${_devKeySafe}"
+      onclick="switchDashTab('${_devKeySafe}','commands')">⚡ Comandos</button>
+    <button class="dash-tab" id="tab_diag_${_devKeySafe}"
+      onclick="switchDashTab('${_devKeySafe}','diagnosis')">🔍 Diagnóstico</button>
+  </div>`;
+
+  // ── SIGNALS TAB ────────────────────────────────────────────────
+  html += `<div class="dash-tab-content active" id="tabcontent_signals_${_devKeySafe}">`;
+
   // ── Render each section from the guide ──────────────────────────
   SECTIONS.forEach(sec => {
     // Get all vars for this section, with value (or undefined if not yet received)
@@ -1293,6 +1351,22 @@ function buildDashHTML(dev, devKey) {
   const isIdle     = devState === 'IDLE';
   const allOk      = !hasAlarms && (isRunning || isIdle) && !primary;
 
+  html += `</div>`; // end signals tab
+
+  // ── COMMANDS TAB ───────────────────────────────────────────────
+  html += `<div class="dash-tab-content" id="tabcontent_commands_${_devKeySafe}">`;
+  const cmdHTML = buildCommandsHTML(devKey);
+  if (cmdHTML) {
+    html += `<div class="cmd-grid" style="margin-top:8px">${cmdHTML}</div>`;
+  } else {
+    html += `<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">
+      Sin comandos configurados para este equipo.
+    </div>`;
+  }
+  html += `</div>`; // end commands tab
+
+  // ── DIAGNOSIS TAB ──────────────────────────────────────────────
+  html += `<div class="dash-tab-content" id="tabcontent_diagnosis_${_devKeySafe}">`;
   html += `<div class="sec-hdr">Diagnóstico IA</div>`;
 
   if (primary) {
@@ -1455,6 +1529,8 @@ function buildDashHTML(dev, devKey) {
     ${entries.map(([k,v])=>`<div class="raw-row"><span class="raw-k">${k}</span><span class="raw-v">${typeof v==='object'?JSON.stringify(v).slice(0,50):String(v)}</span></div>`).join('')}
     </div>`;
   }
+
+  html += `</div>`; // end diagnosis tab
 
   return html;
 }
@@ -1839,6 +1915,87 @@ function requestDiagnosis(devKey) {
   });
   mqtt.publish(topic, payload, 1, false);
   console.log('[PWA] Diagnosis requested:', topic);
+}
+
+// ── DASHBOARD TABS ───────────────────────────────────────────────────────────
+function switchDashTab(devKeySafe, tab) {
+  ['signals','commands','diagnosis'].forEach(t => {
+    const content = document.getElementById('tabcontent_' + t + '_' + devKeySafe);
+    const _btnId = {'signals':'sig','commands':'cmd','diagnosis':'diag'}[t];
+    const btn = document.getElementById('tab_' + _btnId + '_' + devKeySafe);
+    if (content) content.classList.toggle('active', t === tab);
+    if (btn)     btn.classList.toggle('active', t === tab);
+  });
+}
+
+// ── COMMANDS ─────────────────────────────────────────────────────────────────
+function sendCommand(topic, payload, label, needsConfirm) {
+  if (!mqtt || !mqtt.isConnected()) {
+    alert('Sin conexión al broker');
+    return;
+  }
+  if (needsConfirm) {
+    if (!confirm('¿Confirmar: ' + label + '?')) return;
+  }
+  try {
+    mqtt.publish(topic, String(payload || '1'), 1, false);
+    showCmdFeedback('✓ ' + label + ' enviado');
+    console.log('[CMD] Published:', topic, '=', payload);
+  } catch(e) {
+    alert('Error al enviar comando: ' + e.message);
+  }
+}
+
+function showCmdFeedback(msg) {
+  // Remove existing
+  const old = document.getElementById('cmdSent');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'cmdSent';
+  el.className = 'cmd-sent';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2500);
+}
+
+function buildCommandsHTML(devKey) {
+  const dev = devices[devKey];
+  if (!dev) return '';
+
+  const ns = dev.ns, client = dev.client, device = dev.device;
+  const base = ns + '/' + client + '/' + device + '/cmd/';
+
+  // Standard commands from the guide (always shown in tech mode)
+  const stdCmds = loginCfg && loginCfg.techMode ? [
+    { label: 'Reset alarmas',  topic: base + 'reset_alarms', payload: '1',    icon: '🔔', cls: '' },
+    { label: 'Flush manual',   topic: base + 'force_flush',  payload: '1',    icon: '💧', cls: 'warn' },
+    { label: 'Learn baseline', topic: base + 'learn',        payload: '1',    icon: '📊', cls: '' },
+    { label: 'Habilitar',      topic: base + 'enable',       payload: '1',    icon: '▶', cls: 'success' },
+    { label: 'Deshabilitar',   topic: base + 'enable',       payload: '0',    icon: '⏸', cls: 'warn' },
+    { label: 'Reiniciar',      topic: base + 'restart',      payload: '1',    icon: '🔄', cls: 'danger', confirm: true },
+    { label: 'Diagnóstico IA', topic: base + 'report',       payload: '{}',   icon: '🔍', cls: '' },
+  ] : [];
+
+  // Custom commands from clients.json
+  const customCmds = (loginCfg && loginCfg.commands) ? loginCfg.commands.filter(c => {
+    // Show if no device filter or matches this device
+    return !c.device || c.device === device;
+  }) : [];
+
+  const allCmds = [...stdCmds, ...customCmds];
+  if (allCmds.length === 0) return '';
+
+  let html = '';
+  allCmds.forEach(c => {
+    const safeLabel = (c.label || '').replace(/'/g, "\'");
+    const safeTopic = (c.topic || '').replace(/'/g, "\'");
+    const safePayload = (c.payload || '1').replace(/'/g, "\'");
+    html += `<button class="cmd-btn ${c.cls || ''}"
+      onclick="sendCommand('${safeTopic}','${safePayload}','${safeLabel}',${!!c.confirm})">
+      ${c.icon || '⚡'} ${c.label}
+    </button>`;
+  });
+  return html;
 }
 
 function fmtUptime(s) {
