@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#080d1a">
 <title>Hydra Monitor v2.1</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
 <!-- PWA: permite instalar como app en el homescreen -->
@@ -15,10 +14,9 @@
 <script>
 // Generate inline manifest with current URL so it works from any host
 (function() {
-  const urlCode = new URLSearchParams(location.search).get('code') || '';
-  const startUrl = location.pathname + (urlCode ? '?code=' + urlCode : '');
+  const startUrl = location.pathname;
   const manifest = {
-    name: 'Hydra Monitor' + (urlCode ? ' — ' + urlCode : ''),
+    name: 'Hydra Monitor',
     short_name: 'Hydra',
     description: 'Monitor de equipos de tratamiento de agua',
     start_url: startUrl,
@@ -332,6 +330,14 @@ body::before {
 .diag-act { font-size: 11px; color: var(--text2); padding: 1px 0 1px 12px; position: relative; }
 .diag-act::before { content: '→'; position: absolute; left:0; font-size:9px; color: var(--green); top:3px; }
 .diag-sep { margin: 5px 0; border: none; border-top: 1px solid var(--border); }
+.diag-actions { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
+.diag-btn {
+  padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  cursor: pointer; border: 1px solid rgba(0,212,255,.35);
+  background: rgba(0,136,204,.14); color: var(--accent);
+}
+.diag-btn:disabled { opacity:.55; cursor: wait; }
+.llm-meta { font-size:10px; color:var(--text3); font-family:var(--mono); margin-top:6px; }
 
 /* ══ CHARTS ══════════════════════════════════════════════════ */
 .chart-wrap {
@@ -459,31 +465,23 @@ body::before {
     <div class="login-sub">Monitor de equipos en tiempo real</div>
 
     <!-- CLIENT MODE (default) -->
-    <div id="clientLoginFields">
+    <div style="margin-bottom:14px;padding:10px 12px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;font-size:11px;color:var(--text2)">
+      Esta publicación funciona en modo monitor. Para evitar exponer secretos, el acceso es manual y no se generan links de autologin.
+    </div>
+
+<div id="techFields" style="display:block">
       <div class="field">
         <label>Código de acceso</label>
-        <input id="accessCode" type="text" placeholder="ej: ACME2025" autocomplete="off"
+        <input id="accessCode" type="text" placeholder="ej: VACOTO26" autocomplete="off"
                style="text-transform:uppercase; letter-spacing:.1em; font-size:18px; text-align:center"
                oninput="this.value=this.value.toUpperCase()">
       </div>
-    </div>
-
-    <!-- TECH MODE -->
-    <div id="techFields">
-      <div class="field-row">
-        <div class="field"><label>Broker host</label><input id="tHost" placeholder="xxx.hivemq.cloud"></div>
-        <div class="field sm"><label>Puerto</label><input id="tPort" type="number" value="8884"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Usuario</label><input id="tUser" placeholder="usuario"></div>
-        <div class="field"><label>Contraseña</label><input id="tPass" type="password" placeholder="••••"></div>
-      </div>
       <div class="field">
-        <label>Namespace (ej: agua)</label>
-        <input id="tTopic" placeholder="agua" value="agua"
+        <label>Backend URL</label>
+        <input id="backendUrl" placeholder="https://tu-backend.ejemplo.com"
                style="font-family:var(--mono);font-size:13px">
         <div style="font-size:10px;color:var(--text3);margin-top:4px">
-          Solo el namespace — los equipos se detectan automáticamente
+          Este servidor privado valida el código y recibe MQTT sin exponer claves en GitHub Pages.
         </div>
       </div>
     </div>
@@ -491,16 +489,9 @@ body::before {
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
     <div class="login-err" id="loginErr"></div>
 
-    <div id="jsonHint" style="display:none;margin-top:12px;padding:10px 12px;background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.3);border-radius:8px;font-size:11px;color:#ff6b7a">
-      ⚠ No se pudo cargar la configuración (clients.json).<br>
-      Verificá que el archivo existe en el repositorio y que GitHub Pages está activo.
-    </div>
-    <div id="jsonOk" style="display:none;margin-top:10px;font-size:11px;color:var(--green)">
-      ✓ Configuración cargada
-    </div>
     <div class="login-mode-toggle">
-      <span id="modeHint">¿Sos técnico? </span>
-      <a onclick="toggleLoginMode()"><span id="modeLinkText">Acceso técnico</span></a>
+      <span>Publicación segura:</span>
+      <span style="color:var(--text2)">sin códigos compartibles ni configuración sensible dentro del repo</span>
     </div>
   </div>
 </div>
@@ -563,29 +554,10 @@ body::before {
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// CLIENT CODES — editá esto para cada cliente
+// PUBLICATION MODE
 // ═══════════════════════════════════════════════════════════
-// ── CLIENT CODES — cargados desde clients.json (mismo directorio) ──
-// Si no se puede cargar el JSON, se usa el fallback hardcodeado abajo.
-let CLIENT_CODES = {};
-
-async function loadClientCodes() {
-  try {
-    const resp = await fetch('./clients.json');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    CLIENT_CODES = await resp.json();
-    console.log('[Hydra] clients.json cargado:', Object.keys(CLIENT_CODES));
-    const ok = document.getElementById('jsonOk');
-    if (ok) { ok.style.display = 'block'; ok.textContent = '✓ Configuración cargada — ' + Object.keys(CLIENT_CODES).length + ' código(s)'; }
-  } catch(e) {
-    console.warn('[Hydra] No se pudo cargar clients.json:', e.message);
-    // Show warning on login screen
-    const hint = document.getElementById('jsonHint');
-    if (hint) hint.style.display = 'block';
-    // Fallback vacío — el usuario verá "Código inválido" si el JSON no carga
-    CLIENT_CODES = {};
-  }
-}
+// ── Public monitor without embedded client secrets ──
+const PUBLICATION_MODE = 'readonly';
 
 // ═══════════════════════════════════════════════════════════
 // TOPIC LABELS — structure matches official guide sections
@@ -706,21 +678,22 @@ const CHART_COLORS = {
 // ═══════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════
-let mqtt = null;
 let devices = {};        // "ns/client/device" → DeviceData
 let loginCfg = null;
 let activeNav = 'clients';
 let currentClientFilter = null;  // for screenDevices
 let currentDevKey = null;        // for screenDashboard
-let loginMode = 'client';        // 'client' | 'tech'
+let authToken = '';
+let streamSocket = null;
 let charts = {};                 // devKey+varKey → Chart instance
 const HISTORY_MAX = 1080;        // ~3h at 10s intervals
+const BACKEND_URL_KEY = 'hydra_backend_url';
 
 function makeDevice(ns, client, device) {
   return {
     ns, client, device,
     last: {}, alarms: {},
-    aiState: null, aiReport: null,
+    aiState: null, aiReport: null, llmReport: null,
     lastSeen: Date.now(),
     history: {},  // varKey → [{t, v}]
   };
@@ -729,75 +702,34 @@ function makeDevice(ns, client, device) {
 // ═══════════════════════════════════════════════════════════
 // LOGIN
 // ═══════════════════════════════════════════════════════════
-function toggleLoginMode() {
-  loginMode = loginMode === 'client' ? 'tech' : 'client';
-  const isTech = loginMode === 'tech';
-  document.getElementById('clientLoginFields').style.display = isTech ? 'none' : 'block';
-  document.getElementById('techFields').style.display = isTech ? 'block' : 'none';
-  document.getElementById('modeHint').textContent = isTech ? '¿Sos cliente? ' : '¿Sos técnico? ';
-  document.getElementById('modeLinkText').textContent = isTech ? 'Acceso con código' : 'Acceso técnico';
-}
-
 async function doLogin() {
   const errEl = document.getElementById('loginErr');
   errEl.style.display = 'none';
-  // Ensure codes are loaded (fetch is fast if cached)
-  if (Object.keys(CLIENT_CODES).length === 0) await loadClientCodes();
+  const code = document.getElementById('accessCode').value.trim().toUpperCase();
+  const backendBase = getBackendBase();
+  if (!code) { showLoginErr('Ingresá tu código de acceso'); return; }
+  if (!backendBase) { showLoginErr('Ingresá la URL del backend privado'); return; }
 
-  let cfg;
-  if (loginMode === 'client') {
-    const code = document.getElementById('accessCode').value.trim().toUpperCase();
-    if (!code) { showLoginErr('Ingresá tu código de acceso'); return; }
-    cfg = CLIENT_CODES[code];
-    if (!cfg) { showLoginErr('Código inválido — verificá el código con tu proveedor'); return; }
-  } else {
-    const ns = (document.getElementById('tTopic').value.trim() || 'agua').replace(/\/+$/,'');
-    cfg = {
-      host: document.getElementById('tHost').value.trim(),
-      port: parseInt(document.getElementById('tPort').value) || 8884,
-      user: document.getElementById('tUser').value.trim(),
-      pass: document.getElementById('tPass').value,
-      topic: ns + '/#',
-      techMode: true,
-      label: 'Modo Técnico',
-      // No clientFilter/deviceFilter — shows all clients
-    };
-    if (!cfg.host) { showLoginErr('Ingresá el host del broker'); return; }
-  }
-
-  loginCfg = cfg;
   setConn('ing', 'conectando…');
-
-  const clientId = 'hydra_' + Math.random().toString(36).substr(2,8);
-  // Build WebSocket URL explicitly to avoid Paho path issues
-  // Always use 8884 for WebSocket (8883 = raw MQTT only, doesn't work in browser)
-  const wsPort = 8884;
-  const wsUrl = 'wss://' + cfg.host + ':' + wsPort + '/mqtt';
-  console.log('[Hydra] Connecting to:', wsUrl, 'user:', cfg.user);
-  mqtt = new Paho.Client(cfg.host, wsPort, '/mqtt', clientId);
-  mqtt.onConnectionLost = onLost;
-  mqtt.onMessageArrived = onMsg;
-
-  // Test raw WebSocket first to diagnose
   try {
-    const testWs = new WebSocket(wsUrl);
-    testWs.onopen  = () => { console.log('[Hydra] Raw WebSocket OK'); testWs.close(); };
-    testWs.onerror = (e) => { console.error('[Hydra] Raw WebSocket FAILED:', e); };
-  } catch(e) { console.error('[Hydra] WebSocket constructor error:', e); }
-
-  mqtt.connect({
-    useSSL: true,
-    userName: cfg.user,
-    password: cfg.pass,
-    keepAliveInterval: 30,
-    cleanSession: true,
-    onSuccess: onConnected,
-    onFailure: (e) => {
-      setConn('off', 'desconectado');
-      console.error('[Hydra] MQTT connect failed:', e);
-      showLoginErr('Error: ' + (e.errorMessage || 'Sin respuesta') + ' | URL: ' + wsUrl);
+    localStorage.setItem(BACKEND_URL_KEY, backendBase);
+    const resp = await fetch(backendBase + '/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      throw new Error(data.error || 'No se pudo iniciar sesión');
     }
-  });
+
+    authToken = data.token;
+    loginCfg = data.session || {};
+    connectBackendStream();
+  } catch (error) {
+    setConn('off', 'desconectado');
+    showLoginErr(error.message || 'No se pudo conectar al backend');
+  }
 }
 
 function showLoginErr(msg) {
@@ -805,9 +737,65 @@ function showLoginErr(msg) {
   el.textContent = msg; el.style.display = 'block';
 }
 
+function getBackendBase() {
+  const el = document.getElementById('backendUrl');
+  const raw = (el ? el.value : '').trim();
+  return raw.replace(/\/+$/, '');
+}
+
+function getBackendWsUrl() {
+  const base = getBackendBase();
+  if (!base) return '';
+  if (base.startsWith('https://')) return 'wss://' + base.slice('https://'.length) + '/ws';
+  if (base.startsWith('http://')) return 'ws://' + base.slice('http://'.length) + '/ws';
+  return '';
+}
+
+function connectBackendStream() {
+  const wsUrl = getBackendWsUrl();
+  if (!wsUrl || !authToken) {
+    throw new Error('Falta configurar el backend');
+  }
+
+  if (streamSocket) {
+    try { streamSocket.close(); } catch(e) {}
+  }
+
+  streamSocket = new WebSocket(wsUrl + '?token=' + encodeURIComponent(authToken));
+  streamSocket.onopen = () => onConnected();
+  streamSocket.onclose = () => onLost({ errorCode: 1 });
+  streamSocket.onerror = () => {
+    setConn('off', 'desconectado');
+    showLoginErr('No se pudo abrir el stream en tiempo real del backend');
+  };
+  streamSocket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      handleStreamPayload(data);
+    } catch (error) {
+      console.error('[Hydra] stream payload inválido:', error);
+    }
+  };
+}
+
+function handleStreamPayload(data) {
+  if (!data || typeof data !== 'object') return;
+  if (data.type === 'session' && data.session) {
+    loginCfg = { ...loginCfg, ...data.session };
+    return;
+  }
+  if (data.type === 'snapshot' && Array.isArray(data.messages)) {
+    data.messages.forEach(item => onMsg({ topic: item.topic, payload: item.payload }));
+    return;
+  }
+  if (data.type === 'mqtt') {
+    onMsg(data);
+  }
+}
+
 function onConnected() {
   setConn('on', 'conectado');
-  console.log('[onConnected] clientFilter:', loginCfg.clientFilter, '| deviceFilter:', loginCfg.deviceFilter, '| topic:', loginCfg.topic);
+  console.log('[onConnected] clientFilter:', loginCfg.clientFilter, '| deviceFilter:', loginCfg.deviceFilter);
 
   // ── Ocultar login completamente y resetear scroll ──────────
   const loginScreen = document.getElementById('screenLogin');
@@ -818,24 +806,13 @@ function onConnected() {
   if (appTopbar)   appTopbar.style.display   = 'flex';
   window.scrollTo(0, 0);
 
-  // Subscribe to data topics
-  console.log('[Hydra] Subscribing to:', loginCfg.topic);
-  mqtt.subscribe(loginCfg.topic, { qos: 1 });
-  const baseTopic = loginCfg.topic.replace('/#','');
-  const aiTopic = baseTopic + '/+/+/ai/#';
-  console.log('[Hydra] Subscribing to AI:', aiTopic);
-  mqtt.subscribe(aiTopic, { qos: 0 });
-  console.log('[Hydra] clientFilter:', loginCfg.clientFilter || 'none (tech mode)');
-
   if (loginCfg.clientFilter) {
-    // CLIENT MODE: spinner → auto-navigate to device
     document.getElementById('waitLabel').textContent = 'Conectado — aguardando datos…';
     document.getElementById('waitSub').textContent = loginCfg.label || loginCfg.clientFilter;
-    document.getElementById('waitTopic').textContent = loginCfg.topic;
+    document.getElementById('waitTopic').textContent = 'backend: ' + getBackendBase();
     showScreen('waiting');
     waitForDeviceData();
   } else {
-    // TECH MODE: show clients list, populate as messages arrive
     document.getElementById('bottomNav').classList.add('vis');
     showScreen('clients');
     startClientListRefresh();
@@ -883,7 +860,7 @@ function waitForDeviceData() {
       clearInterval(interval);
       document.getElementById('waitLabel').textContent = 'Sin respuesta del equipo';
       document.getElementById('waitSub').textContent = 'Verificá que el equipo esté encendido';
-      document.getElementById('waitTopic').textContent = loginCfg.topic;
+      document.getElementById('waitTopic').textContent = 'backend: ' + getBackendBase();
       document.getElementById('bottomNav').classList.add('vis');
     } else {
       const d = '.'.repeat((attempts % 3) + 1);
@@ -893,15 +870,19 @@ function waitForDeviceData() {
 }
 
 function onLost(resp) {
-  if (resp.errorCode !== 0) setConn('off', 'desconectado');
+  if (resp.errorCode !== 0) {
+    setConn('off', 'desconectado');
+    streamSocket = null;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
 // MESSAGE HANDLER
 // ═══════════════════════════════════════════════════════════
 function onMsg(msg) {
-  const topic = msg.destinationName;
-  const payload = msg.payloadString;
+  const topic = msg.destinationName || msg.topic;
+  const payload = msg.payloadString ?? msg.payload;
+  if (!topic || payload === undefined) return;
   console.log('[MQTT]', topic, '=', payload.slice(0,60));
   // Log parsed parts for first few messages
   if (Object.keys(devices).length < 3) {
@@ -963,6 +944,17 @@ function onMsg(msg) {
       }
     } catch(e) {
       console.log('[AI] report parse failed (probably text payload), ignoring');
+    }
+
+  } else if (group === 'ai' && key === 'llm_report') {
+    try {
+      const parsed = JSON.parse(payload);
+      if (parsed && typeof parsed === 'object') {
+        dev.llmReport = parsed;
+        if (currentDevKey === devKey) renderDashboard(devKey);
+      }
+    } catch(e) {
+      console.log('[LLM] report parse failed, ignoring');
     }
 
   } else if (group !== 'event') {
@@ -1230,13 +1222,11 @@ function buildDashHTML(dev, devKey) {
         <div style="font-size:16px;font-weight:700">${dev.device}</div>
         <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${dev.ns}/${dev.client}</div>
       </div>
-      <button onclick="requestDiagnosis('${devKey}')"
-        style="background:rgba(0,136,204,.15);border:1px solid rgba(0,136,204,.3);
-               border-radius:8px;color:var(--accent);font-size:11px;font-weight:600;
-               padding:7px 12px;cursor:pointer;flex-shrink:0;white-space:nowrap"
-        id="diagBtn_${devKey.replace(/\//g,'_')}">
-        🔍 Diagnosticar
-      </button>
+      <span style="background:rgba(0,230,118,.12);border:1px solid rgba(0,230,118,.28);
+               border-radius:8px;color:var(--green);font-size:10px;font-weight:700;
+               padding:7px 12px;flex-shrink:0;white-space:nowrap">
+        SOLO LECTURA
+      </span>
     </div>
     ${statsBar}`;
 
@@ -1264,8 +1254,6 @@ function buildDashHTML(dev, devKey) {
   html += `<div class="dash-tabs">
     <button class="dash-tab active" id="tab_sig_${_devKeySafe}"
       onclick="switchDashTab('${_devKeySafe}','signals')">📊 Señales</button>
-    <button class="dash-tab" id="tab_cmd_${_devKeySafe}"
-      onclick="switchDashTab('${_devKeySafe}','commands')">⚡ Comandos</button>
     <button class="dash-tab" id="tab_diag_${_devKeySafe}"
       onclick="switchDashTab('${_devKeySafe}','diagnosis')">🔍 Diagnóstico</button>
   </div>`;
@@ -1354,20 +1342,17 @@ function buildDashHTML(dev, devKey) {
   html += `</div>`; // end signals tab
 
   // ── COMMANDS TAB ───────────────────────────────────────────────
-  html += `<div class="dash-tab-content" id="tabcontent_commands_${_devKeySafe}">`;
-  const cmdHTML = buildCommandsHTML(devKey);
-  if (cmdHTML) {
-    html += `<div class="cmd-grid" style="margin-top:8px">${cmdHTML}</div>`;
-  } else {
-    html += `<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">
-      Sin comandos configurados para este equipo.
-    </div>`;
-  }
-  html += `</div>`; // end commands tab
-
   // ── DIAGNOSIS TAB ──────────────────────────────────────────────
   html += `<div class="dash-tab-content" id="tabcontent_diagnosis_${_devKeySafe}">`;
   html += `<div class="sec-hdr">Diagnóstico IA</div>`;
+
+  html += `<div class="diag-actions">
+    <button class="diag-btn" id="btn_llm_${_devKeySafe}" onclick="requestDiagnosis('${devKey}')">Consultar Ollama</button>
+  </div>`;
+
+  if (dev.llmReport) {
+    html += renderLlmDiagnosis(dev.llmReport);
+  }
 
   if (primary) {
     // Full diagnosis from ai/report
@@ -1811,23 +1796,6 @@ function renderConfigScreen() {
   const devCount = Object.keys(devices).length;
   const connInfo = loginCfg || {};
 
-  let shareLinks = '';
-  if (!connInfo.techMode) {
-    Object.values(devices).forEach(dev => {
-      const code = Object.entries(CLIENT_CODES).find(([c, cfg]) => cfg.clientFilter === dev.client);
-      const link = `${location.href.split('?')[0]}?code=${code ? code[0] : ''}`;
-      shareLinks += `<div class="client-card" style="cursor:default" onclick="copyText('${link}')">
-        <div class="client-header">
-          <div class="client-info">
-            <div class="client-name">${dev.device}</div>
-            <div class="client-meta">${dev.ns}/${dev.client}/${dev.device}</div>
-          </div>
-          <span style="font-size:11px;color:var(--text3)">📋 copiar link</span>
-        </div>
-      </div>`;
-    });
-  }
-
   const screen = document.getElementById('screenClients');
   screen.innerHTML = `
     <div class="screen-title">Configuración</div>
@@ -1842,18 +1810,29 @@ function renderConfigScreen() {
       <div class="client-stats">
         <span class="client-stat-chip">user: ${connInfo.user}</span>
         <span class="client-stat-chip">${devCount} equipos detectados</span>
-        <span class="client-stat-chip">${connInfo.techMode ? 'modo técnico' : 'modo cliente'}</span>
+        <span class="client-stat-chip">modo monitor publico</span>
       </div>
     </div>
-    ${shareLinks ? `<div class="screen-title">Links para clientes</div>${shareLinks}` : ''}
+    <div class="client-card" style="cursor:default;margin-bottom:16px">
+      <div class="client-header">
+        <div class="client-info">
+          <div class="client-name">Seguridad</div>
+          <div class="client-meta">Esta publicacion ya no expone codigos de acceso ni genera enlaces de autologin.</div>
+        </div>
+      </div>
+    </div>
     <button class="login-btn" style="max-width:400px;margin-top:16px" onclick="doLogout()">Cerrar sesión</button>`;
 
   showScreen('clients');
 }
 
 function doLogout() {
-  if (mqtt && mqtt.isConnected()) mqtt.disconnect();
-  mqtt = null; devices = {}; loginCfg = null; charts = {};
+  if (streamSocket) {
+    try { streamSocket.close(); } catch(e) {}
+  }
+  streamSocket = null;
+  authToken = '';
+  devices = {}; loginCfg = null; charts = {};
   document.getElementById('bottomNav').classList.remove('vis');
   document.getElementById('btnBack').classList.remove('vis');
   setConn('off', 'desconectado');
@@ -1867,10 +1846,6 @@ function doLogout() {
   if (_at) _at.style.display = 'none';
   showScreen('login', true);
   window.scrollTo(0, 0);
-}
-
-function copyText(txt) {
-  navigator.clipboard.writeText(txt).then(() => alert('Link copiado:\n' + txt));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1891,37 +1866,94 @@ function getStateClass(state) {
 }
 
 function requestDiagnosis(devKey) {
-  if (!mqtt || !mqtt.isConnected()) {
-    alert('Sin conexión al broker');
-    return;
-  }
-  const dev = devices[devKey];
-  if (!dev) return;
-
-  // Show loading state on button
-  const btn = document.getElementById('diagBtn_' + devKey.replace(/\//g,'_'));
-  if (btn) {
-    btn.textContent = '⏳ Solicitando…';
-    btn.disabled = true;
-    setTimeout(() => {
-      if (btn) { btn.textContent = '🔍 Diagnosticar'; btn.disabled = false; }
-    }, 8000);
-  }
-
-  // Publish cmd/report to the device topic — IA will respond with ai/report
-  const topic = dev.ns + '/' + dev.client + '/' + dev.device + '/cmd/report';
-  const payload = JSON.stringify({
-    sections: { production: 1, alarms: 1, timeline: 0, diagnosis: 1 }
-  });
-  mqtt.publish(topic, payload, 1, false);
-  console.log('[PWA] Diagnosis requested:', topic);
+  alert('Esta versión publicada es solo lectura. El diagnóstico remoto debe salir desde un backend o una consola técnica privada.');
 }
 
 // ── DASHBOARD TABS ───────────────────────────────────────────────────────────
+function buildLlmRequestPayload(devKey) {
+  const dev = devices[devKey];
+  return {
+    devKey,
+    lectura_actual: dev ? dev.last : {},
+    ai_state: dev ? (dev.aiState || {}) : {},
+    ai_report: dev ? (dev.aiReport || {}) : {},
+  };
+}
+
+async function requestDiagnosis(devKey) {
+  const dev = devices[devKey];
+  if (!dev) return;
+  const safeKey = devKey.replace(/\//g,'_');
+  const btn = document.getElementById('btn_llm_' + safeKey);
+  if (btn) { btn.disabled = true; btn.textContent = 'Consultando...'; }
+  dev.llmReport = {
+    status: 'processing',
+    diagnostico_cliente: 'Consultando IA local...',
+    resumen: 'Enviando lectura actual al backend privado.',
+  };
+  renderDashboard(devKey);
+  switchDashTab(safeKey, 'diagnosis');
+
+  try {
+    const resp = await fetch(getBackendBase() + '/api/diagnostico', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + authToken,
+      },
+      body: JSON.stringify(buildLlmRequestPayload(devKey)),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || data.detail || 'No se pudo consultar IA');
+    dev.llmReport = data;
+    showCmdFeedback('Diagnostico IA recibido');
+  } catch (error) {
+    dev.llmReport = {
+      status: 'error',
+      diagnostico_cliente: 'No se pudo consultar IA',
+      resumen: error.message || String(error),
+    };
+    showCmdFeedback('Error consultando IA');
+  } finally {
+    renderDashboard(devKey);
+    switchDashTab(safeKey, 'diagnosis');
+  }
+}
+
+function renderLlmDiagnosis(report) {
+  const status = report.status || 'ok';
+  const title = report.diagnostico_cliente || report.respuesta || report.resumen || 'Respuesta IA';
+  const confidence = report.confianza || '';
+  const severity = String(report.severidad || status).toLowerCase();
+  const sevCls = severity.includes('alta') || severity.includes('error') ? 'alarm'
+    : severity.includes('media') || severity.includes('warn') ? 'warn'
+    : 'info';
+  const recommended = Array.isArray(report.acciones_recomendadas) ? report.acciones_recomendadas : [];
+  const notRecommended = Array.isArray(report.acciones_no_recomendadas) ? report.acciones_no_recomendadas : [];
+  const missing = Array.isArray(report.datos_faltantes) ? report.datos_faltantes : [];
+  return `<div class="diag-box" style="margin-bottom:10px">
+    <div class="diag-header">
+      <div class="diag-title">${escapeHtml(title)}</div>
+      <span class="diag-badge db-${sevCls}">${escapeHtml(confidence || status)}</span>
+    </div>
+    ${report.resumen ? `<div class="diag-ev">${escapeHtml(report.resumen)}</div>` : ''}
+    ${recommended.length ? '<hr class="diag-sep">' + recommended.slice(0,4).map(a => `<div class="diag-act">${escapeHtml(a)}</div>`).join('') : ''}
+    ${notRecommended.length ? '<hr class="diag-sep">' + notRecommended.slice(0,3).map(a => `<div class="diag-ev" style="color:var(--orange)">${escapeHtml(a)}</div>`).join('') : ''}
+    ${missing.length ? '<hr class="diag-sep">' + missing.slice(0,4).map(a => `<div class="diag-ev">${escapeHtml(a)}</div>`).join('') : ''}
+    <div class="llm-meta">consulta_id=${escapeHtml(report.consulta_id || '-')} · rag=${escapeHtml(report.rag_docs_usados ?? '-')} · ${escapeHtml(report.origen_respuesta || 'ollama')}</div>
+  </div>`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
 function switchDashTab(devKeySafe, tab) {
-  ['signals','commands','diagnosis'].forEach(t => {
+  ['signals','diagnosis'].forEach(t => {
     const content = document.getElementById('tabcontent_' + t + '_' + devKeySafe);
-    const _btnId = {'signals':'sig','commands':'cmd','diagnosis':'diag'}[t];
+    const _btnId = {'signals':'sig','diagnosis':'diag'}[t];
     const btn = document.getElementById('tab_' + _btnId + '_' + devKeySafe);
     if (content) content.classList.toggle('active', t === tab);
     if (btn)     btn.classList.toggle('active', t === tab);
@@ -1930,20 +1962,7 @@ function switchDashTab(devKeySafe, tab) {
 
 // ── COMMANDS ─────────────────────────────────────────────────────────────────
 function sendCommand(topic, payload, label, needsConfirm) {
-  if (!mqtt || !mqtt.isConnected()) {
-    alert('Sin conexión al broker');
-    return;
-  }
-  if (needsConfirm) {
-    if (!confirm('¿Confirmar: ' + label + '?')) return;
-  }
-  try {
-    mqtt.publish(topic, String(payload || '1'), 1, false);
-    showCmdFeedback('✓ ' + label + ' enviado');
-    console.log('[CMD] Published:', topic, '=', payload);
-  } catch(e) {
-    alert('Error al enviar comando: ' + e.message);
-  }
+  alert('Los comandos remotos están deshabilitados en esta publicación.');
 }
 
 function showCmdFeedback(msg) {
@@ -1959,43 +1978,7 @@ function showCmdFeedback(msg) {
 }
 
 function buildCommandsHTML(devKey) {
-  const dev = devices[devKey];
-  if (!dev) return '';
-
-  const ns = dev.ns, client = dev.client, device = dev.device;
-  const base = ns + '/' + client + '/' + device + '/cmd/';
-
-  // Standard commands from the guide (always shown in tech mode)
-  const stdCmds = loginCfg && loginCfg.techMode ? [
-    { label: 'Reset alarmas',  topic: base + 'reset_alarms', payload: '1',    icon: '🔔', cls: '' },
-    { label: 'Flush manual',   topic: base + 'force_flush',  payload: '1',    icon: '💧', cls: 'warn' },
-    { label: 'Learn baseline', topic: base + 'learn',        payload: '1',    icon: '📊', cls: '' },
-    { label: 'Habilitar',      topic: base + 'enable',       payload: '1',    icon: '▶', cls: 'success' },
-    { label: 'Deshabilitar',   topic: base + 'enable',       payload: '0',    icon: '⏸', cls: 'warn' },
-    { label: 'Reiniciar',      topic: base + 'restart',      payload: '1',    icon: '🔄', cls: 'danger', confirm: true },
-    { label: 'Diagnóstico IA', topic: base + 'report',       payload: '{}',   icon: '🔍', cls: '' },
-  ] : [];
-
-  // Custom commands from clients.json
-  const customCmds = (loginCfg && loginCfg.commands) ? loginCfg.commands.filter(c => {
-    // Show if no device filter or matches this device
-    return !c.device || c.device === device;
-  }) : [];
-
-  const allCmds = [...stdCmds, ...customCmds];
-  if (allCmds.length === 0) return '';
-
-  let html = '';
-  allCmds.forEach(c => {
-    const safeLabel = (c.label || '').replace(/'/g, "\'");
-    const safeTopic = (c.topic || '').replace(/'/g, "\'");
-    const safePayload = (c.payload || '1').replace(/'/g, "\'");
-    html += `<button class="cmd-btn ${c.cls || ''}"
-      onclick="sendCommand('${safeTopic}','${safePayload}','${safeLabel}',${!!c.confirm})">
-      ${c.icon || '⚡'} ${c.label}
-    </button>`;
-  });
-  return html;
+  return '';
 }
 
 function fmtUptime(s) {
@@ -2017,27 +2000,13 @@ function fmtTime(ts) {
 // Show login screen on load
 showScreen('login');
 
-// Restore last used tech path
+// Restore last used backend URL
 (function() {
-  const p = localStorage.getItem('hydra_last_path');
-  const el = document.getElementById('tTopic');
+  const p = localStorage.getItem(BACKEND_URL_KEY);
+  const el = document.getElementById('backendUrl');
   if (p && el) el.value = p;
 })();
 
-// Auto-login from URL ?code=XXXXX
-const urlCode = new URLSearchParams(location.search).get('code');
-if (urlCode) {
-  document.getElementById('accessCode').value = urlCode.toUpperCase();
-  // Wait for clients.json to load, then login
-  loadClientCodes().then(() => {
-    if (CLIENT_CODES[urlCode.toUpperCase()]) {
-      setTimeout(doLogin, 100);
-    }
-  });
-} else {
-  // Pre-load codes in background so first login is instant
-  loadClientCodes();
-}
 </script>
 </body>
 </html>
