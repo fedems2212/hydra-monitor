@@ -1371,7 +1371,7 @@ function buildDashHTML(dev, devKey) {
   html += `<div class="sec-hdr">Diagnóstico IA</div>`;
 
   html += `<div class="diag-actions">
-    <button class="diag-btn" id="btn_llm_${_devKeySafe}" onclick="requestDiagnosis('${devKey}')">Consultar Ollama</button>
+    <button class="diag-btn" id="btn_llm_${_devKeySafe}" onclick="requestDiagnosis('${devKey}')">Consultar IA</button>
   </div>`;
 
   if (dev.llmReport) {
@@ -1964,7 +1964,7 @@ function renderLlmDiagnosis(report) {
     ${recommended.length ? '<hr class="diag-sep">' + recommended.slice(0,4).map(a => `<div class="diag-act">${escapeHtml(a)}</div>`).join('') : ''}
     ${notRecommended.length ? '<hr class="diag-sep">' + notRecommended.slice(0,3).map(a => `<div class="diag-ev" style="color:var(--orange)">${escapeHtml(a)}</div>`).join('') : ''}
     ${missing.length ? '<hr class="diag-sep">' + missing.slice(0,4).map(a => `<div class="diag-ev">${escapeHtml(a)}</div>`).join('') : ''}
-    <div class="llm-meta">consulta_id=${escapeHtml(report.consulta_id || '-')} · rag=${escapeHtml(report.rag_docs_usados ?? '-')} · ${escapeHtml(report.origen_respuesta || 'ollama')}</div>
+    <div class="llm-meta">consulta_id=${escapeHtml(report.consulta_id || '-')} · rag=${escapeHtml(report.rag_docs_usados ?? '-')} · ${escapeHtml(report.origen_respuesta || 'IA')}</div>
   </div>`;
 }
 
