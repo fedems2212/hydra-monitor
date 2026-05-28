@@ -685,6 +685,7 @@ let currentClientFilter = null;  // for screenDevices
 let currentDevKey = null;        // for screenDashboard
 let authToken = '';
 let streamSocket = null;
+let historyCharts = {};
 let charts = {};                 // devKey+varKey → Chart instance
 const HISTORY_MAX = 1080;        // ~3h at 10s intervals
 const BACKEND_URL_KEY = 'hydra_backend_url';
@@ -1265,6 +1266,8 @@ function buildDashHTML(dev, devKey) {
       onclick="switchDashTab('${_devKeySafe}','signals')">📊 Señales</button>
     ${loginCfg && loginCfg.techMode ? `<button class="dash-tab" id="tab_cmd_${_devKeySafe}"
       onclick="switchDashTab('${_devKeySafe}','commands')">Comandos</button>` : ''}
+    <button class="dash-tab" id="tab_hist_${_devKeySafe}"
+      onclick="switchDashTab('${_devKeySafe}','history')">Historial</button>
     <button class="dash-tab" id="tab_diag_${_devKeySafe}"
       onclick="switchDashTab('${_devKeySafe}','diagnosis')">🔍 Diagnóstico</button>
   </div>`;
@@ -1360,6 +1363,10 @@ function buildDashHTML(dev, devKey) {
   }
 
   // ── DIAGNOSIS TAB ──────────────────────────────────────────────
+  html += `<div class="dash-tab-content" id="tabcontent_history_${_devKeySafe}">
+    ${buildHistoryHTML(devKey)}
+  </div>`;
+
   html += `<div class="dash-tab-content" id="tabcontent_diagnosis_${_devKeySafe}">`;
   html += `<div class="sec-hdr">Diagnóstico IA</div>`;
 
@@ -1968,16 +1975,179 @@ function escapeHtml(value) {
 }
 
 function switchDashTab(devKeySafe, tab) {
-  ['signals','commands','diagnosis'].forEach(t => {
+  ['signals','commands','diagnosis','history'].forEach(t => {
     const content = document.getElementById('tabcontent_' + t + '_' + devKeySafe);
-    const _btnId = {'signals':'sig','commands':'cmd','diagnosis':'diag'}[t];
+    const _btnId = {'signals':'sig','commands':'cmd','diagnosis':'diag','history':'hist'}[t];
     const btn = document.getElementById('tab_' + _btnId + '_' + devKeySafe);
     if (content) content.classList.toggle('active', t === tab);
     if (btn)     btn.classList.toggle('active', t === tab);
   });
+  if (tab === 'history') {
+    const devKey = currentDevKey && currentDevKey.replace(/\//g,'_') === devKeySafe
+      ? currentDevKey
+      : devKeySafe.replace(/_/g, '/');
+    loadHistory(devKey);
+  }
 }
 
 // ── COMMANDS ─────────────────────────────────────────────────────────────────
+function buildHistoryHTML(devKey) {
+  const safe = devKey.replace(/\//g,'_');
+  const today = new Date().toISOString().slice(0, 10);
+  return `<div class="sec-hdr">Historial del equipo</div>
+    <div class="diag-box" style="margin-bottom:10px">
+      <div class="diag-title">${escapeHtml(devKey)}</div>
+      <div class="llm-meta">Datos guardados en el backend privado. Elegi un dia o rango rapido.</div>
+    </div>
+    <div class="diag-actions" style="flex-wrap:wrap">
+      <input id="hist_date_${safe}" type="date" value="${today}" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 10px">
+      <button class="diag-btn" onclick="loadHistory('${devKey}', 'day')">Dia</button>
+      <button class="diag-btn" onclick="loadHistory('${devKey}', 'yesterday')">Ayer</button>
+      <button class="diag-btn" onclick="loadHistory('${devKey}', '7d')">7 dias</button>
+    </div>
+    <div id="history_status_${safe}" class="llm-meta" style="margin:8px 0">Abrir historial para cargar datos.</div>
+    <div id="history_charts_${safe}"></div>
+    <div id="history_events_${safe}"></div>`;
+}
+
+function getHistoryRange(devKey, mode) {
+  const safe = devKey.replace(/\//g,'_');
+  const dateEl = document.getElementById('hist_date_' + safe);
+  const selected = dateEl && dateEl.value ? new Date(dateEl.value + 'T00:00:00') : new Date();
+  const to = new Date();
+  let from = new Date(selected);
+  let until = new Date(selected);
+  until.setDate(until.getDate() + 1);
+
+  if (mode === 'yesterday') {
+    from = new Date();
+    from.setDate(from.getDate() - 1);
+    from.setHours(0, 0, 0, 0);
+    until = new Date(from);
+    until.setDate(until.getDate() + 1);
+    if (dateEl) dateEl.value = from.toISOString().slice(0, 10);
+  } else if (mode === '7d') {
+    from = new Date();
+    from.setDate(from.getDate() - 7);
+    until = to;
+  }
+
+  return { from: from.toISOString(), to: until.toISOString() };
+}
+
+async function loadHistory(devKey, mode = 'day') {
+  const safe = devKey.replace(/\//g,'_');
+  const status = document.getElementById('history_status_' + safe);
+  if (!status) return;
+  status.textContent = 'Cargando historial...';
+  try {
+    const range = getHistoryRange(devKey, mode);
+    const url = new URL(getBackendBase() + '/api/history');
+    url.searchParams.set('devKey', devKey);
+    url.searchParams.set('from', range.from);
+    url.searchParams.set('to', range.to);
+    url.searchParams.set('limit', '12000');
+    const resp = await fetch(url.toString(), {
+      headers: { 'Authorization': 'Bearer ' + authToken },
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || 'No se pudo cargar historial');
+    renderHistoryData(devKey, data);
+  } catch (error) {
+    status.textContent = error.message || 'Error cargando historial';
+  }
+}
+
+function renderHistoryData(devKey, data) {
+  const safe = devKey.replace(/\//g,'_');
+  const status = document.getElementById('history_status_' + safe);
+  const chartsBox = document.getElementById('history_charts_' + safe);
+  const eventsBox = document.getElementById('history_events_' + safe);
+  if (!status || !chartsBox || !eventsBox) return;
+
+  Object.keys(historyCharts).forEach(id => {
+    if (id.startsWith('hist_' + safe + '_')) {
+      historyCharts[id].destroy();
+      delete historyCharts[id];
+    }
+  });
+
+  const seriesEntries = Object.entries(data.series || {})
+    .filter(([, points]) => Array.isArray(points) && points.length > 1)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 8);
+
+  status.textContent = `${data.count || 0} registros leidos. ${seriesEntries.length} variables graficables.`;
+
+  if (!seriesEntries.length) {
+    chartsBox.innerHTML = `<div class="diag-box"><div class="diag-title">Sin datos numericos para el rango elegido</div></div>`;
+  } else {
+    chartsBox.innerHTML = seriesEntries.map(([varKey, points]) => {
+      const cfg = LABELS[varKey] || {};
+      const latest = points[points.length - 1];
+      const id = 'hist_' + safe + '_' + varKey.replace(/\W/g, '_');
+      return `<div class="chart-wrap">
+        <div class="chart-title">${escapeHtml(cfg.label || varKey)}
+          <span>${Number(latest.v).toFixed(2)} ${escapeHtml(cfg.unit || '')}</span>
+        </div>
+        <div class="chart-canvas-wrap" style="height:150px">
+          <canvas id="${id}"></canvas>
+        </div>
+      </div>`;
+    }).join('');
+
+    setTimeout(() => {
+      seriesEntries.forEach(([varKey, rawPoints]) => {
+        const id = 'hist_' + safe + '_' + varKey.replace(/\W/g, '_');
+        const canvas = document.getElementById(id);
+        if (!canvas) return;
+        const step = Math.max(1, Math.ceil(rawPoints.length / 500));
+        const points = rawPoints.filter((_, idx) => idx % step === 0);
+        const color = CHART_COLORS[varKey] || '#00d4ff';
+        const cfg = LABELS[varKey] || {};
+        historyCharts[id] = new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels: points.map(p => fmtTime(p.t)),
+            datasets: [{
+              data: points.map(p => p.v),
+              borderColor: color,
+              backgroundColor: color + '15',
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: true,
+              tension: 0.25,
+            }],
+          },
+          options: {
+            animation: false,
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: {
+              callbacks: { label: ctx => `${ctx.parsed.y.toFixed(2)} ${cfg.unit || ''}` },
+            }},
+            scales: {
+              x: { display: true, ticks: { color: '#3d5470', maxTicksLimit: 6 } },
+              y: { display: true, grid: { color: 'rgba(30,45,69,0.6)' }, ticks: { color: '#3d5470', maxTicksLimit: 4 } },
+            },
+          },
+        });
+      });
+    }, 20);
+  }
+
+  const events = (data.events || []).slice(-80).reverse();
+  eventsBox.innerHTML = `<div class="sec-hdr">Eventos</div>` + (
+    events.length
+      ? events.map(ev => `<div class="diag-box" style="margin-bottom:6px">
+          <div class="diag-title">${escapeHtml(ev.varKey || ev.topic)}</div>
+          <div class="llm-meta">${escapeHtml(new Date(ev.t).toLocaleString())} · ${escapeHtml(ev.source || '')}</div>
+          <div class="diag-ev">${escapeHtml(String(ev.value ?? ev.payload ?? ''))}</div>
+        </div>`).join('')
+      : `<div class="diag-box"><div class="diag-title">Sin eventos para el rango elegido</div></div>`
+  );
+}
+
 async function sendCommand(topic, payload, label, needsConfirm) {
   if (!(loginCfg && loginCfg.techMode)) {
     showCmdFeedback('Comandos solo en modo tecnico');
