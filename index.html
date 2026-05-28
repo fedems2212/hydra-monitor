@@ -2072,12 +2072,20 @@ function renderHistoryData(devKey, data) {
     }
   });
 
-  const seriesEntries = Object.entries(data.series || {})
-    .filter(([, points]) => Array.isArray(points) && points.length > 1)
+  const allSeriesEntries = Object.entries(data.series || {})
+    .filter(([, points]) => Array.isArray(points) && points.length > 1);
+
+  const seriesEntries = allSeriesEntries
+    .filter(([varKey]) => {
+      const cfg = LABELS[varKey] || {};
+      return cfg.chart && cfg.type === 'analog';
+    })
     .sort((a, b) => b[1].length - a[1].length)
     .slice(0, 8);
 
-  status.textContent = `${data.count || 0} registros leidos. ${seriesEntries.length} variables graficables.`;
+  const digitalEvents = buildDigitalHistoryEvents(allSeriesEntries);
+
+  status.textContent = `${data.count || 0} registros leidos. ${seriesEntries.length} graficos analogicos. ${digitalEvents.length} cambios digitales.`;
 
   if (!seriesEntries.length) {
     chartsBox.innerHTML = `<div class="diag-box"><div class="diag-title">Sin datos numericos para el rango elegido</div></div>`;
@@ -2136,16 +2144,53 @@ function renderHistoryData(devKey, data) {
     }, 20);
   }
 
-  const events = (data.events || []).slice(-80).reverse();
+  const events = [...(data.events || []), ...digitalEvents]
+    .sort((a, b) => a.t - b.t)
+    .slice(-100)
+    .reverse();
   eventsBox.innerHTML = `<div class="sec-hdr">Eventos</div>` + (
     events.length
       ? events.map(ev => `<div class="diag-box" style="margin-bottom:6px">
-          <div class="diag-title">${escapeHtml(ev.varKey || ev.topic)}</div>
+          <div class="diag-title">${escapeHtml(ev.title || ev.varKey || ev.topic)}</div>
           <div class="llm-meta">${escapeHtml(new Date(ev.t).toLocaleString())} · ${escapeHtml(ev.source || '')}</div>
-          <div class="diag-ev">${escapeHtml(String(ev.value ?? ev.payload ?? ''))}</div>
+          <div class="diag-ev">${escapeHtml(ev.text || String(ev.value ?? ev.payload ?? ''))}</div>
         </div>`).join('')
       : `<div class="diag-box"><div class="diag-title">Sin eventos para el rango elegido</div></div>`
   );
+}
+
+function buildDigitalHistoryEvents(seriesEntries) {
+  const events = [];
+  seriesEntries.forEach(([varKey, points]) => {
+    const cfg = LABELS[varKey] || {};
+    const isDigital = cfg.type === 'digital' || varKey.startsWith('alarm/') || varKey === 'stat/run' || varKey === 'stat/enabled';
+    if (!isDigital) return;
+    let last = null;
+    points.forEach(point => {
+      const current = Number(point.v) >= 0.5 ? 1 : 0;
+      if (last === null) {
+        last = current;
+        return;
+      }
+      if (current === last) return;
+      last = current;
+      events.push({
+        t: point.t,
+        source: 'digital',
+        varKey,
+        title: cfg.label || varKey,
+        text: `Cambio a ${formatDigitalHistoryValue(current, cfg)}`,
+        value: current,
+      });
+    });
+  });
+  return events;
+}
+
+function formatDigitalHistoryValue(value, cfg = {}) {
+  const active = Number(value) >= 0.5;
+  if (cfg.invert) return active ? 'NO / alarma' : 'OK';
+  return active ? 'ON / activo' : 'OFF / inactivo';
 }
 
 async function sendCommand(topic, payload, label, needsConfirm) {
