@@ -476,7 +476,7 @@ body::before {
                style="text-transform:uppercase; letter-spacing:.1em; font-size:18px; text-align:center"
                oninput="this.value=this.value.toUpperCase()">
       </div>
-      <div class="field">
+      <div class="field" id="backendUrlField">
         <label>Backend URL</label>
         <input id="backendUrl" placeholder="https://tu-backend.ejemplo.com"
                style="font-family:var(--mono);font-size:13px">
@@ -688,6 +688,7 @@ let streamSocket = null;
 let charts = {};                 // devKey+varKey → Chart instance
 const HISTORY_MAX = 1080;        // ~3h at 10s intervals
 const BACKEND_URL_KEY = 'hydra_backend_url';
+const DEFAULT_BACKEND_URL = 'http://100.68.38.12:8080';
 
 function makeDevice(ns, client, device) {
   return {
@@ -738,6 +739,7 @@ function showLoginErr(msg) {
 }
 
 function getBackendBase() {
+  if (DEFAULT_BACKEND_URL) return DEFAULT_BACKEND_URL.replace(/\/+$/, '');
   const el = document.getElementById('backendUrl');
   const raw = (el ? el.value : '').trim();
   return raw.replace(/\/+$/, '');
@@ -2002,8 +2004,14 @@ showScreen('login');
 
 // Restore last used backend URL
 (function() {
-  const p = localStorage.getItem(BACKEND_URL_KEY);
   const el = document.getElementById('backendUrl');
+  const field = document.getElementById('backendUrlField');
+  if (DEFAULT_BACKEND_URL) {
+    if (el) el.value = DEFAULT_BACKEND_URL;
+    if (field) field.style.display = 'none';
+    return;
+  }
+  const p = localStorage.getItem(BACKEND_URL_KEY);
   if (p && el) el.value = p;
 })();
 
