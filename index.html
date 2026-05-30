@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#080d1a">
-<title>Hydra Monitor v2.1</title>
+<title>Ergo Monitor v2.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
 <!-- PWA: permite instalar como app en el homescreen -->
@@ -16,8 +16,8 @@
 (function() {
   const startUrl = location.pathname;
   const manifest = {
-    name: 'Hydra Monitor',
-    short_name: 'Hydra',
+    name: 'Ergo Monitor',
+    short_name: 'ERGO',
     description: 'Monitor de equipos',
     start_url: startUrl,
     display: 'standalone',
@@ -92,7 +92,7 @@ body::before {
   background-size: 28px 28px;
 }
 
-/* ══ TOPBAR ══════════════════════════════════════════════════ */
+/* â•â• TOPBAR â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .topbar {
   position: sticky; top: 0; z-index: 200;
   background: rgba(8,13,26,0.9); backdrop-filter: blur(16px);
@@ -120,13 +120,13 @@ body::before {
 }
 .back-btn.vis { display: flex; }
 
-/* ══ SCREENS ═════════════════════════════════════════════════ */
+/* â•â• SCREENS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .screen { display: none; position: relative; z-index: 1; padding: 12px 12px 80px; animation: screenIn .22s ease both; }
 .screen.active { display: block; }
 @keyframes screenIn { from{opacity:0;transform:translateX(18px)} to{opacity:1;transform:translateX(0)} }
 @keyframes screenBack { from{opacity:0;transform:translateX(-18px)} to{opacity:1;transform:translateX(0)} }
 
-/* ══ LOGIN SCREEN ════════════════════════════════════════════ */
+/* â•â• LOGIN SCREEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 #screenLogin {
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; min-height: calc(100dvh - 52px);
@@ -170,7 +170,7 @@ body::before {
 .field-row .field { flex: 1; }
 .field-row .field.sm { flex: 0 0 80px; }
 
-/* ══ CLIENTS SCREEN ══════════════════════════════════════════ */
+/* â•â• CLIENTS SCREEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .screen-title { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing:.1em; text-transform: uppercase; margin-bottom: 12px; }
 
 .client-card {
@@ -200,7 +200,7 @@ body::before {
 .client-stat-chip.alarm { border-color: rgba(255,61,87,.3); color: var(--red); background: rgba(255,61,87,.08); }
 .client-stat-chip.online { border-color: rgba(0,230,118,.3); color: var(--green); }
 
-/* ══ DEVICES SCREEN ══════════════════════════════════════════ */
+/* â•â• DEVICES SCREEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .device-card {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: var(--r); margin-bottom: 10px;
@@ -232,7 +232,7 @@ body::before {
 .chevron { color: var(--text3); font-size: 10px; transition: transform .25s; flex-shrink:0; }
 .device-card.open .chevron { transform: rotate(180deg); }
 
-/* ══ DASHBOARD ═══════════════════════════════════════════════ */
+/* â•â• DASHBOARD â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .device-body { display: none; padding: 0 14px 14px; }
 .device-card.open .device-body { display: block; }
 
@@ -326,9 +326,9 @@ body::before {
 .db-warn  { background: rgba(255,171,64,.2); color: var(--orange); }
 .db-info  { background: rgba(0,212,255,.15); color: var(--accent); }
 .diag-ev  { font-size: 11px; color: var(--text2); padding: 1px 0 1px 10px; position: relative; }
-.diag-ev::before { content: '·'; position: absolute; left:2px; color: var(--accentd); }
+.diag-ev::before { content: 'Â·'; position: absolute; left:2px; color: var(--accentd); }
 .diag-act { font-size: 11px; color: var(--text2); padding: 1px 0 1px 12px; position: relative; }
-.diag-act::before { content: '→'; position: absolute; left:0; font-size:9px; color: var(--green); top:3px; }
+.diag-act::before { content: 'â†’'; position: absolute; left:0; font-size:9px; color: var(--green); top:3px; }
 .diag-sep { margin: 5px 0; border: none; border-top: 1px solid var(--border); }
 .diag-actions { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
 .diag-btn {
@@ -339,7 +339,7 @@ body::before {
 .diag-btn:disabled { opacity:.55; cursor: wait; }
 .llm-meta { font-size:10px; color:var(--text3); font-family:var(--mono); margin-top:6px; }
 
-/* ══ CHARTS ══════════════════════════════════════════════════ */
+/* â•â• CHARTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .chart-wrap {
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: var(--r2); padding: 10px; margin-bottom: 7px;
@@ -348,7 +348,7 @@ body::before {
 .chart-title span { font-family: var(--mono); color: var(--accent); }
 .chart-canvas-wrap { position: relative; height: 100px; }
 
-/* ══ BOTTOM NAV ══════════════════════════════════════════════ */
+/* â•â• BOTTOM NAV â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
   background: rgba(8,13,26,.95); backdrop-filter: blur(12px);
@@ -365,7 +365,7 @@ body::before {
 .nav-btn svg { width: 19px; height: 19px; }
 .nav-btn.active { color: var(--accent); }
 
-/* ══ RAW TOPICS (tech) ═══════════════════════════════════════ */
+/* â•â• RAW TOPICS (tech) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .raw-toggle { font-size: 11px; color: var(--text3); cursor: pointer; user-select:none; padding: 4px 0; }
 .raw-toggle:hover { color: var(--text2); }
 .raw-table { display: none; }
@@ -375,19 +375,19 @@ body::before {
 .raw-k { color: var(--text3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .raw-v { color: var(--text); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ══ EMPTY & LOADING ═════════════════════════════════════════ */
+/* â•â• EMPTY & LOADING â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .empty { text-align: center; padding: 50px 20px; color: var(--text3); }
 .empty-icon { font-size: 36px; margin-bottom: 10px; }
 .empty h3 { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
 .empty p { font-size: 11px; line-height: 1.7; }
 
-/* ══ ANIMATIONS ══════════════════════════════════════════════ */
+/* â•â• ANIMATIONS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
 @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 @keyframes spin { to{transform:rotate(360deg)} }
 @keyframes flash { 0%{background:rgba(0,212,255,.15)} 100%{background:transparent} }
 
-/* ══ DASHBOARD TABS ══════════════════════════════════════════ */
+/* â•â• DASHBOARD TABS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .dash-tabs {
   display: flex; gap: 0; margin-bottom: 14px;
   background: var(--bg3); border: 1px solid var(--border);
@@ -406,7 +406,7 @@ body::before {
 .dash-tab-content { display: none; }
 .dash-tab-content.active { display: block; }
 
-/* ══ COMMANDS ════════════════════════════════════════════════ */
+/* â•â• COMMANDS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .cmd-section { margin-top: 4px; }
 .cmd-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
 .cmd-btn {
@@ -431,7 +431,7 @@ body::before {
   pointer-events: none;
 }
 
-/* ══ RESPONSIVE ══════════════════════════════════════════════ */
+/* â•â• RESPONSIVE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media (min-width:560px) {
   #screenClients, #screenDevices, #screenDashboard { max-width: 640px; margin: 0 auto; }
 }
@@ -439,10 +439,10 @@ body::before {
 </head>
 <body>
 
-<!-- ══ TOPBAR ══════════════════════════════════════════════ -->
+<!-- â•â• TOPBAR â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="topbar" id="appTopbar" style="display:none">
-  <div class="logo">HYDRA<em>/monitor</em></div>
-  <button class="back-btn" id="btnBack" onclick="goBack()">← Volver</button>
+  <div class="logo">ERGO<em>/monitor</em></div>
+  <button class="back-btn" id="btnBack" onclick="goBack()">â† Volver</button>
   <div class="topbar-right">
     <div class="conn-badge" id="connBadge" style="display:none">
       <div class="conn-dot"></div>
@@ -453,15 +453,15 @@ body::before {
 
 <!-- LOGIN TOPBAR -->
 <div class="topbar" id="loginTopbar">
-  <div class="logo">HYDRA<em>/monitor</em></div>
+  <div class="logo">ERGO<em>/monitor</em></div>
 </div>
 
-<!-- ══ SCREENS ═════════════════════════════════════════════ -->
+<!-- â•â• SCREENS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 
 <!-- LOGIN -->
 <div class="screen" id="screenLogin">
   <div class="login-card">
-    <div class="login-logo">// HYDRA</div>
+    <div class="login-logo">// ERGO</div>
     <div class="login-sub">Monitor de equipos en tiempo real</div>
 
     <!-- CLIENT MODE (default) -->
@@ -471,7 +471,7 @@ body::before {
 
 <div id="techFields" style="display:block">
       <div class="field">
-        <label>Código de acceso</label>
+        <label>CÃ³digo de acceso</label>
         <input id="accessCode" type="text" placeholder="ej: ACME" autocomplete="off"
                style="text-transform:uppercase; letter-spacing:.1em; font-size:18px; text-align:center"
                oninput="this.value=this.value.toUpperCase()">
@@ -481,7 +481,7 @@ body::before {
         <input id="backendUrl" placeholder="https://tu-backend.ejemplo.com"
                style="font-family:var(--mono);font-size:13px">
         <div style="font-size:10px;color:var(--text3);margin-top:4px">
-          Este servidor privado valida el código y recibe MQTT sin exponer claves en GitHub Pages.
+          Este servidor privado valida el cÃ³digo y recibe MQTT sin exponer claves en GitHub Pages.
         </div>
       </div>
     </div>
@@ -490,8 +490,8 @@ body::before {
     <div class="login-err" id="loginErr"></div>
 
     <div class="login-mode-toggle">
-      <span>Publicación segura:</span>
-      <span style="color:var(--text2)">sin códigos compartibles ni configuración sensible dentro del repo</span>
+      <span>PublicaciÃ³n segura:</span>
+      <span style="color:var(--text2)">sin cÃ³digos compartibles ni configuraciÃ³n sensible dentro del repo</span>
     </div>
   </div>
 </div>
@@ -500,7 +500,7 @@ body::before {
 <div class="screen" id="screenWaiting">
   <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:65vh;gap:18px;text-align:center;padding:24px">
     <div style="width:52px;height:52px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
-    <div style="font-size:16px;font-weight:600;color:var(--text)" id="waitLabel">Conectando…</div>
+    <div style="font-size:16px;font-weight:600;color:var(--text)" id="waitLabel">Conectandoâ€¦</div>
     <div style="font-size:12px;color:var(--text2)" id="waitSub">Esperando datos del equipo</div>
     <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:4px" id="waitTopic"></div>
   </div>
@@ -511,9 +511,9 @@ body::before {
   <div class="screen-title">Clientes</div>
   <div id="clientsList"></div>
   <div class="empty" id="clientsEmpty" style="display:none">
-    <div class="empty-icon">📡</div>
-    <h3>Esperando datos…</h3>
-    <p>Suscripto al broker.<br>Los equipos aparecerán al llegar mensajes.</p>
+    <div class="empty-icon">ðŸ“¡</div>
+    <h3>Esperando datosâ€¦</h3>
+    <p>Suscripto al broker.<br>Los equipos aparecerÃ¡n al llegar mensajes.</p>
   </div>
 </div>
 
@@ -553,18 +553,18 @@ body::before {
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // PUBLICATION MODE
-// ═══════════════════════════════════════════════════════════
-// ── Public monitor without embedded client secrets ──
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â”€â”€ Public monitor without embedded client secrets â”€â”€
 const PUBLICATION_MODE = 'readonly';
 
-// ═══════════════════════════════════════════════════════════
-// TOPIC LABELS — structure matches official guide sections
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// TOPIC LABELS â€” structure matches official guide sections
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // SECTIONS define the fixed dashboard layout per the guide.
-// Every variable listed here will appear in the dashboard —
+// Every variable listed here will appear in the dashboard â€”
 // with its value if received, dimmed/empty if not yet received.
 const SECTIONS = [
   {
@@ -583,9 +583,9 @@ const SECTIONS = [
     vars: [
       { k:'tele/cistern_ok',        label:'Cisterna',       type:'digital' },
       { k:'tele/tank_demand',       label:'Demanda tanque', type:'digital' },
-      { k:'tele/pressure_ok',       label:'Presión OK',     type:'digital' },
+      { k:'tele/pressure_ok',       label:'PresiÃ³n OK',     type:'digital' },
       { k:'tele/high_pressure_ok',  label:'P. alta OK',     type:'digital' },
-      { k:'tele/leak_ok',           label:'Sin pérdida',    type:'digital' },
+      { k:'tele/leak_ok',           label:'Sin pÃ©rdida',    type:'digital' },
       { k:'tele/door_ok',           label:'Puerta OK',      type:'digital' },
     ]
   },
@@ -594,7 +594,7 @@ const SECTIONS = [
     vars: [
       { k:'tele/bomba_baja',    label:'Bomba baja',     type:'digital' },
       { k:'tele/bomba_alta',    label:'Bomba alta',     type:'digital' },
-      { k:'tele/flush_valve',   label:'Válvula flush',  type:'digital' },
+      { k:'tele/flush_valve',   label:'VÃ¡lvula flush',  type:'digital' },
     ]
   },
   {
@@ -604,8 +604,8 @@ const SECTIONS = [
       { k:'tele/flow_rej_lpm',   label:'Caudal rechazo',   type:'analog', unit:'L/min', chart:true },
       { k:'tele/flow_feed_lpm',  label:'Caudal entrada',   type:'analog', unit:'L/min', chart:true },
       { k:'tele/total_liters',   label:'Total litros',     type:'analog', unit:'L',     chart:true },
-      { k:'tele/total_m3',       label:'Total m³',         type:'analog', unit:'m³',   chart:true },
-      { k:'tele/recovery_pct',   label:'Recuperación',     type:'analog', unit:'%',     chart:true },
+      { k:'tele/total_m3',       label:'Total mÂ³',         type:'analog', unit:'mÂ³',   chart:true },
+      { k:'tele/recovery_pct',   label:'RecuperaciÃ³n',     type:'analog', unit:'%',     chart:true },
     ]
   },
   {
@@ -614,18 +614,18 @@ const SECTIONS = [
       { k:'tele/p_feed_bar',       label:'P. entrada',    type:'analog', unit:'bar', chart:true },
       { k:'tele/p_high_bar',       label:'P. alta',       type:'analog', unit:'bar', chart:true },
       { k:'tele/p_perm_bar',       label:'P. permeado',   type:'analog', unit:'bar', chart:true },
-      { k:'tele/dp_prefilter_bar', label:'ΔP prefiltro',  type:'analog', unit:'bar', chart:true },
-      { k:'tele/dp_membrane_bar',  label:'ΔP membrana',   type:'analog', unit:'bar', chart:true },
+      { k:'tele/dp_prefilter_bar', label:'Î”P prefiltro',  type:'analog', unit:'bar', chart:true },
+      { k:'tele/dp_membrane_bar',  label:'Î”P membrana',   type:'analog', unit:'bar', chart:true },
     ]
   },
   {
     key: 'calidad', label: 'Calidad del agua',
     vars: [
-      { k:'tele/cond_feed_us',   label:'Cond. entrada',     type:'analog', unit:'µS/cm', chart:true },
-      { k:'tele/cond_perm_us',   label:'Cond. permeado',    type:'analog', unit:'µS/cm', chart:true },
+      { k:'tele/cond_feed_us',   label:'Cond. entrada',     type:'analog', unit:'ÂµS/cm', chart:true },
+      { k:'tele/cond_perm_us',   label:'Cond. permeado',    type:'analog', unit:'ÂµS/cm', chart:true },
       { k:'tele/tds_feed_ppm',   label:'TDS entrada',       type:'analog', unit:'ppm',   chart:true },
       { k:'tele/tds_perm_ppm',   label:'TDS permeado',      type:'analog', unit:'ppm',   chart:true },
-      { k:'tele/temp_c',         label:'Temperatura',       type:'analog', unit:'°C',    chart:true },
+      { k:'tele/temp_c',         label:'Temperatura',       type:'analog', unit:'Â°C',    chart:true },
       { k:'tele/ph',             label:'pH',                type:'analog', unit:'',      chart:true },
       { k:'tele/orp_mv',         label:'ORP',               type:'analog', unit:'mV',    chart:true },
     ]
@@ -651,14 +651,14 @@ SECTIONS.forEach(sec => {
 });
 
 const ALARM_LABELS = {
-  'offline':          'Sin comunicación',
-  'low_pressure':     'Presión baja',
-  'high_pressure':    'Presión alta',
+  'offline':          'Sin comunicaciÃ³n',
+  'low_pressure':     'PresiÃ³n baja',
+  'high_pressure':    'PresiÃ³n alta',
   'no_water_cistern': 'Sin agua cisterna',
   'no_water':         'Sin agua',
   'low_flow':         'Caudal bajo',
   'no_flow':          'Sin caudal',
-  'leak':             'Pérdida detectada',
+  'leak':             'PÃ©rdida detectada',
   'service_due':      'Servicio requerido',
   'membrane_fouling': 'Membrana sucia',
 };
@@ -675,10 +675,10 @@ const CHART_COLORS = {
   'tele/tds_perm_ppm':   '#ffab40', 'tele/tds_feed_ppm': '#ffd180',
 };
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // STATE
-// ═══════════════════════════════════════════════════════════
-let devices = {};        // "ns/client/device" → DeviceData
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+let devices = {};        // "ns/client/device" â†’ DeviceData
 let loginCfg = null;
 let activeNav = 'clients';
 let currentClientFilter = null;  // for screenDevices
@@ -686,9 +686,9 @@ let currentDevKey = null;        // for screenDashboard
 let authToken = '';
 let streamSocket = null;
 let historyCharts = {};
-let charts = {};                 // devKey+varKey → Chart instance
+let charts = {};                 // devKey+varKey â†’ Chart instance
 const HISTORY_MAX = 1080;        // ~3h at 10s intervals
-const BACKEND_URL_KEY = 'hydra_backend_url';
+const BACKEND_URL_KEY = 'ergo_backend_url';
 const DEFAULT_BACKEND_URL = 'https://hydrasrv.taila60ccb.ts.net';
 
 function makeDevice(ns, client, device) {
@@ -697,22 +697,22 @@ function makeDevice(ns, client, device) {
     last: {}, alarms: {},
     aiState: null, aiReport: null, llmReport: null,
     lastSeen: Date.now(),
-    history: {},  // varKey → [{t, v}]
+    history: {},  // varKey â†’ [{t, v}]
   };
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // LOGIN
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function doLogin() {
   const errEl = document.getElementById('loginErr');
   errEl.style.display = 'none';
   const code = document.getElementById('accessCode').value.trim().toUpperCase();
   const backendBase = getBackendBase();
-  if (!code) { showLoginErr('Ingresá tu código de acceso'); return; }
-  if (!backendBase) { showLoginErr('Ingresá la URL del backend privado'); return; }
+  if (!code) { showLoginErr('IngresÃ¡ tu cÃ³digo de acceso'); return; }
+  if (!backendBase) { showLoginErr('IngresÃ¡ la URL del backend privado'); return; }
 
-  setConn('ing', 'conectando…');
+  setConn('ing', 'conectandoâ€¦');
   try {
     localStorage.setItem(BACKEND_URL_KEY, backendBase);
     const resp = await fetch(backendBase + '/api/login', {
@@ -722,7 +722,7 @@ async function doLogin() {
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {
-      throw new Error(data.error || 'No se pudo iniciar sesión');
+      throw new Error(data.error || 'No se pudo iniciar sesiÃ³n');
     }
 
     authToken = data.token;
@@ -776,7 +776,7 @@ function connectBackendStream() {
       const data = JSON.parse(event.data);
       handleStreamPayload(data);
     } catch (error) {
-      console.error('[Hydra] stream payload inválido:', error);
+      console.error('[ERGO] stream payload invÃ¡lido:', error);
     }
   };
 }
@@ -800,7 +800,7 @@ function onConnected() {
   setConn('on', 'conectado');
   console.log('[onConnected] clientFilter:', loginCfg.clientFilter, '| deviceFilter:', loginCfg.deviceFilter);
 
-  // ── Ocultar login completamente y resetear scroll ──────────
+  // â”€â”€ Ocultar login completamente y resetear scroll â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const loginScreen = document.getElementById('screenLogin');
   const loginTopbar = document.getElementById('loginTopbar');
   const appTopbar   = document.getElementById('appTopbar');
@@ -810,7 +810,7 @@ function onConnected() {
   window.scrollTo(0, 0);
 
   if (loginCfg.clientFilter) {
-    document.getElementById('waitLabel').textContent = 'Conectado — aguardando datos…';
+    document.getElementById('waitLabel').textContent = 'Conectado â€” aguardando datosâ€¦';
     document.getElementById('waitSub').textContent = loginCfg.label || loginCfg.clientFilter;
     document.getElementById('waitTopic').textContent = 'backend: ' + getBackendBase();
     showScreen('waiting');
@@ -862,7 +862,7 @@ function waitForDeviceData() {
     } else if (attempts >= 30) {
       clearInterval(interval);
       document.getElementById('waitLabel').textContent = 'Sin respuesta del equipo';
-      document.getElementById('waitSub').textContent = 'Verificá que el equipo esté encendido';
+      document.getElementById('waitSub').textContent = 'VerificÃ¡ que el equipo estÃ© encendido';
       document.getElementById('waitTopic').textContent = 'backend: ' + getBackendBase();
       document.getElementById('bottomNav').classList.add('vis');
     } else {
@@ -879,9 +879,9 @@ function onLost(resp) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // MESSAGE HANDLER
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function onMsg(msg) {
   const topic = msg.destinationName || msg.topic;
   const payload = msg.payloadString ?? msg.payload;
@@ -902,7 +902,7 @@ function onMsg(msg) {
   // Skip engine HB
   if (client === 'ai' && device === 'engine') return;
 
-  // Client filter (client mode) — case-insensitive match
+  // Client filter (client mode) â€” case-insensitive match
   if (loginCfg && loginCfg.clientFilter) {
     const filter = loginCfg.clientFilter.toLowerCase().trim();
     const incoming = client.toLowerCase().trim();
@@ -927,7 +927,7 @@ function onMsg(msg) {
     if (v === 1) dev.alarms[key] = { ts: Date.now() };
     else delete dev.alarms[key];
     if (activeNav === 'clients') refreshClientCard(client);
-    // Alarm changed — update alarm section only, not full dashboard
+    // Alarm changed â€” update alarm section only, not full dashboard
     if (currentDevKey === devKey) updateAlarmSection(devKey);
 
   } else if (group === 'ai' && key === 'state') {
@@ -1000,9 +1000,9 @@ function onMsg(msg) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // NAVIGATION
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function showScreen(name, goBack) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen' + name.charAt(0).toUpperCase() + name.slice(1));
@@ -1076,9 +1076,9 @@ function openDevice(devKey) {
   renderDashboard(devKey);
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // CLIENTS LIST
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function getClients() {
   const map = {};
   Object.values(devices).forEach(dev => {
@@ -1124,11 +1124,11 @@ function buildClientCardHTML(clientId, devList) {
     return age < 200 && !d.alarms['offline'];
   }).length;
 
-  const icons = ['💧','🏭','⚙','🔬','🌊'];
+  const icons = ['ðŸ’§','ðŸ­','âš™','ðŸ”¬','ðŸŒŠ'];
   const icon = icons[clientId.charCodeAt(0) % icons.length];
 
-  let chips = `<span class="client-stat-chip online">● ${onlineCount}/${devList.length} online</span>`;
-  if (totalAlarms > 0) chips += `<span class="client-stat-chip alarm">⚠ ${totalAlarms} alarmas</span>`;
+  let chips = `<span class="client-stat-chip online">â— ${onlineCount}/${devList.length} online</span>`;
+  if (totalAlarms > 0) chips += `<span class="client-stat-chip alarm">âš  ${totalAlarms} alarmas</span>`;
   devList.forEach(d => chips += `<span class="client-stat-chip">${d.device}</span>`);
 
   return `
@@ -1136,7 +1136,7 @@ function buildClientCardHTML(clientId, devList) {
       <div class="client-icon">${icon}</div>
       <div class="client-info">
         <div class="client-name">${clientId}</div>
-        <div class="client-meta">agua/${clientId} · ${devList.length} equipo(s)</div>
+        <div class="client-meta">agua/${clientId} Â· ${devList.length} equipo(s)</div>
       </div>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text3)">
         <polyline points="9 18 15 12 9 6"/>
@@ -1152,9 +1152,9 @@ function refreshClientCard(clientId) {
   card.innerHTML = buildClientCardHTML(clientId, devList);
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // DEVICES SCREEN
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderDevicesScreen(clientId, isBack) {
   const devList = Object.values(devices).filter(d => d.client === clientId);
   document.getElementById('devicesTitle').textContent = clientId.toUpperCase();
@@ -1178,8 +1178,8 @@ function renderDevicesScreen(clientId, isBack) {
           <div class="device-id">${dev.device}</div>
           <div class="device-path">${dev.ns}/${dev.client}</div>
         </div>
-        ${alarmCount > 0 ? `<span class="alarm-pill">⚠ ${alarmCount}</span>` : ''}
-        <span style="color:var(--text3);font-size:12px">›</span>
+        ${alarmCount > 0 ? `<span class="alarm-pill">âš  ${alarmCount}</span>` : ''}
+        <span style="color:var(--text3);font-size:12px">â€º</span>
       </div>`;
     list.appendChild(card);
   });
@@ -1187,9 +1187,9 @@ function renderDevicesScreen(clientId, isBack) {
   showScreen('devices', isBack);
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // DASHBOARD
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderDashboard(devKey) {
   const dev = devices[devKey];
   if (!dev) return;
@@ -1199,7 +1199,7 @@ function renderDashboard(devKey) {
 }
 
 function buildDashHTML(dev, devKey) {
-  const state = dev.aiState ? dev.aiState.state : (dev.last['stat/status'] || '—');
+  const state = dev.aiState ? dev.aiState.state : (dev.last['stat/status'] || 'â€”');
   const stateClass = getStateClass(state);
 
   // Stats bar
@@ -1210,8 +1210,8 @@ function buildDashHTML(dev, devKey) {
   let statsBar = '';
   if (uptime !== undefined || rssi !== undefined) {
     statsBar = `<div class="stats-bar" style="margin-bottom:10px">`;
-    if (uptime !== undefined) statsBar += `<span class="stat-chip">⏱ <b>${fmtUptime(uptime)}</b></span>`;
-    if (rssi   !== undefined) statsBar += `<span class="stat-chip">📶 <b>${rssi} dBm</b></span>`;
+    if (uptime !== undefined) statsBar += `<span class="stat-chip">â± <b>${fmtUptime(uptime)}</b></span>`;
+    if (rssi   !== undefined) statsBar += `<span class="stat-chip">ðŸ“¶ <b>${rssi} dBm</b></span>`;
     if (fw) statsBar += `<span class="stat-chip">fw <b>${fw}</b></span>`;
     if (hb !== undefined) statsBar += `<span class="stat-chip">hb <b>${hb}</b></span>`;
     statsBar += `</div>`;
@@ -1245,12 +1245,12 @@ function buildDashHTML(dev, devKey) {
   html += `<div class="sec-hdr">Alarmas</div>`;
   html += `<div id="alarmSection_${devKey.replace(/\//g,'_')}">`;
   if (activeAlarms.length === 0) {
-    html += `<div class="no-alarm">✓ Sin alarmas activas</div>`;
+    html += `<div class="no-alarm">âœ“ Sin alarmas activas</div>`;
   } else {
     activeAlarms.forEach(([key, data]) => {
       const dur = Math.round((Date.now() - data.ts) / 60000);
       html += `<div class="alarm-row">
-        <span>⚠</span>
+        <span>âš </span>
         <span class="alarm-key">${ALARM_LABELS[key] || key}</span>
         <span class="alarm-dur">${dur} min</span>
       </div>`;
@@ -1259,23 +1259,23 @@ function buildDashHTML(dev, devKey) {
   html += `</div>`;
 
   // Digital I/O tiles
-  // ── TAB SYSTEM ────────────────────────────────────────────────
+  // â”€â”€ TAB SYSTEM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const _devKeySafe = devKey.replace(/\//g,'_');
   html += `<div class="dash-tabs">
     <button class="dash-tab active" id="tab_sig_${_devKeySafe}"
-      onclick="switchDashTab('${_devKeySafe}','signals')">📊 Señales</button>
+      onclick="switchDashTab('${_devKeySafe}','signals')">ðŸ“Š SeÃ±ales</button>
     ${loginCfg && loginCfg.techMode ? `<button class="dash-tab" id="tab_cmd_${_devKeySafe}"
       onclick="switchDashTab('${_devKeySafe}','commands')">Comandos</button>` : ''}
     <button class="dash-tab" id="tab_hist_${_devKeySafe}"
       onclick="switchDashTab('${_devKeySafe}','history')">Historial</button>
     <button class="dash-tab" id="tab_diag_${_devKeySafe}"
-      onclick="switchDashTab('${_devKeySafe}','diagnosis')">🔍 Diagnóstico</button>
+      onclick="switchDashTab('${_devKeySafe}','diagnosis')">ðŸ” DiagnÃ³stico</button>
   </div>`;
 
-  // ── SIGNALS TAB ────────────────────────────────────────────────
+  // â”€â”€ SIGNALS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   html += `<div class="dash-tab-content active" id="tabcontent_signals_${_devKeySafe}">`;
 
-  // ── Render each section from the guide ──────────────────────────
+  // â”€â”€ Render each section from the guide â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   SECTIONS.forEach(sec => {
     // Get all vars for this section, with value (or undefined if not yet received)
     const items = sec.vars.map(v => ({
@@ -1293,7 +1293,7 @@ function buildDashHTML(dev, devKey) {
     html += `</div>`;
   });
 
-  // ── Unknown vars received from device not in guide ──────────────
+  // â”€â”€ Unknown vars received from device not in guide â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const knownKeys = new Set(Object.keys(LABELS));
   const unknownAnalog = Object.keys(dev.last).filter(k =>
     !knownKeys.has(k) &&
@@ -1321,11 +1321,11 @@ function buildDashHTML(dev, devKey) {
     // Charts for analog vars that have history
   const chartVars = Object.keys(dev.history).filter(k => dev.history[k].length > 1);
   if (chartVars.length > 0) {
-    html += `<div class="sec-hdr" data-sec="charts">Gráficos (última hora)</div>`;
+    html += `<div class="sec-hdr" data-sec="charts">GrÃ¡ficos (Ãºltima hora)</div>`;
     chartVars.forEach(varKey => {
       const lcfg = LABELS[varKey] || {};
       const latest = dev.history[varKey].slice(-1)[0];
-      const latestVal = latest ? latest.v.toFixed(2) : '—';
+      const latestVal = latest ? latest.v.toFixed(2) : 'â€”';
       html += `<div class="chart-wrap" id="cw_${devKey}_${varKey.replace(/\//g,'_')}">
         <div class="chart-title">
           ${lcfg.label || varKey}
@@ -1338,7 +1338,7 @@ function buildDashHTML(dev, devKey) {
     });
   }
 
-  // AI Diagnosis — uses ai/report if available, else ai/state signals
+  // AI Diagnosis â€” uses ai/report if available, else ai/state signals
   const rawReport = dev.aiReport || null;
   const analysis  = rawReport ? (rawReport.analysis || rawReport) : null;
   const primary   = analysis ? (analysis.primary_diagnosis || null) : null;
@@ -1355,23 +1355,23 @@ function buildDashHTML(dev, devKey) {
 
   html += `</div>`; // end signals tab
 
-  // ── COMMANDS TAB ───────────────────────────────────────────────
+  // â”€â”€ COMMANDS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (loginCfg && loginCfg.techMode) {
     html += `<div class="dash-tab-content" id="tabcontent_commands_${_devKeySafe}">
       ${buildCommandsHTML(devKey)}
     </div>`;
   }
 
-  // ── DIAGNOSIS TAB ──────────────────────────────────────────────
+  // â”€â”€ DIAGNOSIS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   html += `<div class="dash-tab-content" id="tabcontent_history_${_devKeySafe}">
     ${buildHistoryHTML(devKey)}
   </div>`;
 
   html += `<div class="dash-tab-content" id="tabcontent_diagnosis_${_devKeySafe}">`;
-  html += `<div class="sec-hdr">Diagnóstico IA</div>`;
+  html += `<div class="sec-hdr">DiagnÃ³stico IA</div>`;
 
   html += `<div class="diag-actions">
-    <button class="diag-btn" id="btn_llm_${_devKeySafe}" onclick="requestDiagnosis('${devKey}')">Consultar IA</button>
+    <button class="diag-btn" id="btn_llm_${_devKeySafe}" onclick="requestDiagnosis('${devKey}')">Consultar Ollama</button>
   </div>`;
 
   if (dev.llmReport) {
@@ -1388,12 +1388,12 @@ function buildDashHTML(dev, devKey) {
     const rw = primary.resolve_when || [];
     html += `<div class="diag-box">
       <div class="diag-header">
-        <div class="diag-title">${primary.title || '—'}</div>
+        <div class="diag-title">${primary.title || 'â€”'}</div>
         <span class="diag-badge db-${sevCls}">~${score}%</span>
       </div>
       ${bc.length > 0 ? '<div style="margin-bottom:5px">' + bc.slice(0,5).map(b=>`<div class="diag-ev">${b}</div>`).join('') + '</div>' : ''}
       ${ac.length > 0 ? '<hr class="diag-sep"><div>' + ac.slice(0,4).map(a=>`<div class="diag-act">${a}</div>`).join('') + '</div>' : ''}
-      ${rw.length > 0 ? '<hr class="diag-sep"><div style="font-size:10px;color:var(--text3);margin-top:4px">' + rw.slice(0,2).map(r=>`<div style="padding:1px 0 1px 12px;position:relative"><span style="position:absolute;left:0;color:var(--green)">✓</span>${r}</div>`).join('') + '</div>' : ''}
+      ${rw.length > 0 ? '<hr class="diag-sep"><div style="font-size:10px;color:var(--text3);margin-top:4px">' + rw.slice(0,2).map(r=>`<div style="padding:1px 0 1px 12px;position:relative"><span style="position:absolute;left:0;color:var(--green)">âœ“</span>${r}</div>`).join('') + '</div>' : ''}
     </div>`;
 
     // Show secondary diagnoses if available
@@ -1404,7 +1404,7 @@ function buildDashHTML(dev, devKey) {
         const sv = (d.severity||'INFO').toLowerCase();
         html += `<div class="diag-box" style="margin-top:6px;opacity:.8">
           <div class="diag-header">
-            <div class="diag-title" style="font-size:12px">${d.title||'—'}</div>
+            <div class="diag-title" style="font-size:12px">${d.title||'â€”'}</div>
             <span class="diag-badge db-${sv==='alarm'?'alarm':sv==='warn'?'warn':'info'}" style="font-size:8px">~${sc}%</span>
           </div>
         </div>`;
@@ -1413,8 +1413,8 @@ function buildDashHTML(dev, devKey) {
     }
 
   } else if (aiSt) {
-    // No full report yet — show state summary from ai/state
-    const st      = aiSt.state || '—';
+    // No full report yet â€” show state summary from ai/state
+    const st      = aiSt.state || 'â€”';
     const sigs    = aiSt.signals || {};
     const openAlm = aiSt.open_alarms || [];
     const dedic   = aiSt.dedicated || {};
@@ -1422,7 +1422,7 @@ function buildDashHTML(dev, devKey) {
 
     html += `<div class="diag-box">
       <div class="diag-header">
-        <div class="diag-title">Motor activo — estado en tiempo real</div>
+        <div class="diag-title">Motor activo â€” estado en tiempo real</div>
         <span class="diag-badge db-info">${st}</span>
       </div>`;
 
@@ -1431,7 +1431,7 @@ function buildDashHTML(dev, devKey) {
       html += '<hr class="diag-sep">';
       openAlm.slice(0,4).forEach(a => {
         const dur = a.set_ts ? Math.round((Date.now()/1000 - a.set_ts)/60) : '?';
-        html += `<div class="diag-ev" style="color:var(--red)">⚠ ${ALARM_LABELS[a.alarm_key] || a.alarm_key} (${dur} min)</div>`;
+        html += `<div class="diag-ev" style="color:var(--red)">âš  ${ALARM_LABELS[a.alarm_key] || a.alarm_key} (${dur} min)</div>`;
       });
     }
 
@@ -1440,7 +1440,7 @@ function buildDashHTML(dev, devKey) {
     if (sigs.run !== null && sigs.run !== undefined)          sigItems.push('run=' + sigs.run);
     if (sigs.tank_demand !== null && sigs.tank_demand !== undefined) sigItems.push('demanda=' + sigs.tank_demand);
     if (sigs.cistern_ok !== null && sigs.cistern_ok !== undefined)   sigItems.push('cisterna=' + sigs.cistern_ok);
-    if (sigs.pressure_ok !== null && sigs.pressure_ok !== undefined) sigItems.push('presión=' + sigs.pressure_ok);
+    if (sigs.pressure_ok !== null && sigs.pressure_ok !== undefined) sigItems.push('presiÃ³n=' + sigs.pressure_ok);
     if (sigs.flow_lpm !== null && sigs.flow_lpm !== undefined)       sigItems.push('caudal=' + parseFloat(sigs.flow_lpm).toFixed(2) + ' L/min');
 
     if (sigItems.length > 0) {
@@ -1450,77 +1450,77 @@ function buildDashHTML(dev, devKey) {
 
     // Dedicated mode info
     if (dedic.enabled) {
-      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--accent)">🔴 IA dedicada activa${dedic.auto_control ? ' · auto-control ON' : ''}</div>`;
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--accent)">ðŸ”´ IA dedicada activa${dedic.auto_control ? ' Â· auto-control ON' : ''}</div>`;
     }
 
     // Learn progress
     if (learn.running) {
       const pct = learn.target_prod_s > 0 ? Math.round(learn.prod_accum_s / learn.target_prod_s * 100) : 0;
-      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--yellow)">📊 Aprendiendo baseline: ${pct}%</div>`;
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--yellow)">ðŸ“Š Aprendiendo baseline: ${pct}%</div>`;
     }
 
     html += `<hr class="diag-sep"><div style="font-size:10px;color:var(--text3);margin-top:4px">
-      Para diagnóstico completo, generá un informe desde la app IA en la PC.
+      Para diagnÃ³stico completo, generÃ¡ un informe desde la app IA en la PC.
     </div></div>`;
 
   } else if (allOk) {
-    // Everything is fine — show positive summary
+    // Everything is fine â€” show positive summary
     const run_s  = dev.last['stat/uptime_s'];
     const flow   = dev.last['tele/flow_perm_lpm'] || dev.last['tele/flow_lpm'];
     const cond   = dev.last['tele/cond_perm_us'];
     const reject = kpis.ro_rejection_ratio;
     html += `<div class="diag-box" style="background:rgba(0,230,118,.05);border-color:rgba(0,230,118,.2)">
       <div class="diag-header">
-        <div class="diag-title" style="color:var(--green)">✓ Operación normal</div>
+        <div class="diag-title" style="color:var(--green)">âœ“ OperaciÃ³n normal</div>
         <span class="diag-badge" style="background:rgba(0,230,118,.15);color:var(--green)">${devState}</span>
       </div>
       <div style="margin-top:6px">
         ${flow !== undefined ? `<div class="diag-ev">Caudal: ${parseFloat(flow).toFixed(2)} L/min</div>` : ''}
-        ${cond !== undefined ? `<div class="diag-ev">Conductividad permeado: ${parseFloat(cond).toFixed(1)} µS/cm</div>` : ''}
+        ${cond !== undefined ? `<div class="diag-ev">Conductividad permeado: ${parseFloat(cond).toFixed(1)} ÂµS/cm</div>` : ''}
         ${reject !== undefined ? `<div class="diag-ev">Rechazo de sales: ${(reject*100).toFixed(1)}%</div>` : ''}
         ${run_s !== undefined ? `<div class="diag-ev">Uptime: ${fmtUptime(run_s)}</div>` : ''}
       </div>
-      ${rawReport ? '' : '<hr class="diag-sep"><div style="font-size:10px;color:var(--text3)">Generá un informe desde la PC para diagnóstico detallado.</div>'}
+      ${rawReport ? '' : '<hr class="diag-sep"><div style="font-size:10px;color:var(--text3)">GenerÃ¡ un informe desde la PC para diagnÃ³stico detallado.</div>'}
     </div>`;
 
   } else if (aiSt) {
-    // No full report yet — show state summary from ai/state
-    const st      = aiSt.state || '—';
+    // No full report yet â€” show state summary from ai/state
+    const st      = aiSt.state || 'â€”';
     const sigs    = aiSt.signals || {};
     const openAlm = aiSt.open_alarms || [];
     const dedic   = aiSt.dedicated || {};
     const learn   = aiSt.learn || {};
     html += `<div class="diag-box">
       <div class="diag-header">
-        <div class="diag-title">Motor activo — estado en tiempo real</div>
+        <div class="diag-title">Motor activo â€” estado en tiempo real</div>
         <span class="diag-badge db-info">${st}</span>
       </div>`;
     if (openAlm.length > 0) {
       html += '<hr class="diag-sep">';
       openAlm.slice(0,4).forEach(a => {
         const dur = a.set_ts ? Math.round((Date.now()/1000 - a.set_ts)/60) : '?';
-        html += `<div class="diag-ev" style="color:var(--red)">⚠ ${ALARM_LABELS[a.alarm_key] || a.alarm_key} (${dur} min)</div>`;
+        html += `<div class="diag-ev" style="color:var(--red)">âš  ${ALARM_LABELS[a.alarm_key] || a.alarm_key} (${dur} min)</div>`;
       });
     }
     const sigItems = [];
     if (sigs.run !== null && sigs.run !== undefined)           sigItems.push('run=' + sigs.run);
     if (sigs.tank_demand !== undefined)  sigItems.push('demanda=' + sigs.tank_demand);
     if (sigs.cistern_ok  !== undefined)  sigItems.push('cisterna=' + sigs.cistern_ok);
-    if (sigs.pressure_ok !== undefined)  sigItems.push('presión=' + sigs.pressure_ok);
+    if (sigs.pressure_ok !== undefined)  sigItems.push('presiÃ³n=' + sigs.pressure_ok);
     if (sigs.flow_lpm    !== undefined)  sigItems.push('caudal=' + parseFloat(sigs.flow_lpm).toFixed(2) + ' L/min');
     if (sigItems.length > 0) {
       html += '<hr class="diag-sep">';
       sigItems.forEach(s => { html += `<div class="diag-ev">${s}</div>`; });
     }
     if (dedic.enabled) {
-      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--accent)">🔴 IA dedicada activa</div>`;
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--accent)">ðŸ”´ IA dedicada activa</div>`;
     }
     if (learn.running) {
       const pct = learn.target_prod_s > 0 ? Math.round(learn.prod_accum_s / learn.target_prod_s * 100) : 0;
-      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--yellow)">📊 Aprendiendo baseline: ${pct}%</div>`;
+      html += `<hr class="diag-sep"><div class="diag-ev" style="color:var(--yellow)">ðŸ“Š Aprendiendo baseline: ${pct}%</div>`;
     }
     html += `<hr class="diag-sep"><div style="font-size:10px;color:var(--text3);margin-top:4px">
-      Presioná 🔍 Diagnosticar para diagnóstico completo.
+      PresionÃ¡ ðŸ” Diagnosticar para diagnÃ³stico completo.
     </div></div>`;
 
   } else {
@@ -1533,7 +1533,7 @@ function buildDashHTML(dev, devKey) {
   if (loginCfg && loginCfg.techMode) {
     const entries = Object.entries(dev.last).sort();
     html += `<div class="sec-hdr" style="margin-top:14px">Topics crudos</div>
-    <div class="raw-toggle" onclick="this.nextSibling.classList.toggle('vis');this.textContent=this.nextSibling.classList.contains('vis')?'▼ ocultar topics crudos':'▶ ver topics crudos (${entries.length})'">▶ ver topics crudos (${entries.length})</div>
+    <div class="raw-toggle" onclick="this.nextSibling.classList.toggle('vis');this.textContent=this.nextSibling.classList.contains('vis')?'â–¼ ocultar topics crudos':'â–¶ ver topics crudos (${entries.length})'">â–¶ ver topics crudos (${entries.length})</div>
     <div class="raw-table">
     ${entries.map(([k,v])=>`<div class="raw-row"><span class="raw-k">${k}</span><span class="raw-v">${typeof v==='object'?JSON.stringify(v).slice(0,50):String(v)}</span></div>`).join('')}
     </div>`;
@@ -1545,7 +1545,7 @@ function buildDashHTML(dev, devKey) {
 }
 
 function buildTiles(dev, filterFn) {
-  // Legacy helper — still used by partialUpdateTile
+  // Legacy helper â€” still used by partialUpdateTile
   return Object.entries(LABELS)
     .filter(([k, cfg]) => !cfg.hide && filterFn(cfg))
     .map(([k, cfg]) => ({ key: k, val: dev.last[k], cfg }));
@@ -1556,14 +1556,14 @@ function renderTile(t) {
   const safeKey = key.replace(/\//g,'_');
   const hasVal  = val !== undefined && val !== null && val !== '';
 
-  // ── DIMMED tile: variable known but no data yet ──
+  // â”€â”€ DIMMED tile: variable known but no data yet â”€â”€
   if (!hasVal) {
     const isDig = cfg.type === 'digital';
     return `<div class="tile t-off" id="tile_${safeKey}" style="opacity:.35">
       <div class="tile-label">${cfg.label}</div>
       ${isDig
-        ? `<div class="dig-row"><div class="dig-led" style="background:var(--border2)"></div><div class="dig-label off">—</div></div>`
-        : `<div class="tile-val" style="font-size:15px;color:var(--text3)">—<span class="tile-unit">${cfg.unit||''}</span></div>`
+        ? `<div class="dig-row"><div class="dig-led" style="background:var(--border2)"></div><div class="dig-label off">â€”</div></div>`
+        : `<div class="tile-val" style="font-size:15px;color:var(--text3)">â€”<span class="tile-unit">${cfg.unit||''}</span></div>`
       }
     </div>`;
   }
@@ -1612,13 +1612,13 @@ function partialUpdateTile(fullKey, val) {
   const tile = document.getElementById('tile_' + safeKey);
 
   if (!tile) {
-    // Tile doesn't exist yet — this var just arrived for the first time
+    // Tile doesn't exist yet â€” this var just arrived for the first time
     // Find the section container and add it, or do a targeted section update
     addTileToSection(fullKey, val, cfg);
     return;
   }
 
-  // Tile exists — update in-place (fast, no re-render)
+  // Tile exists â€” update in-place (fast, no re-render)
   if (cfg.type === 'digital') {
     const isOn    = (val == 1 || val === true || val === 'true');
     const isAlarm = cfg.invert ? isOn : false;
@@ -1652,7 +1652,7 @@ function addTileToSection(fullKey, val, cfg) {
   let tilesDiv = document.getElementById(secId);
 
   if (!tilesDiv) {
-    // Section doesn't exist yet — create it
+    // Section doesn't exist yet â€” create it
     const dashContent = document.getElementById('dashContent');
     if (!dashContent) return;
     // Find the right insertion point (after alarms, before charts)
@@ -1680,11 +1680,11 @@ function updateAlarmSection(devKey) {
 
   const activeAlarms = Object.entries(dev.alarms).filter(([k]) => k !== 'offline');
   if (activeAlarms.length === 0) {
-    alarmDiv.innerHTML = `<div class="no-alarm">✓ Sin alarmas activas</div>`;
+    alarmDiv.innerHTML = `<div class="no-alarm">âœ“ Sin alarmas activas</div>`;
   } else {
     alarmDiv.innerHTML = activeAlarms.map(([key, data]) => {
       const dur = Math.round((Date.now() - data.ts) / 60000);
-      return `<div class="alarm-row"><span>⚠</span>
+      return `<div class="alarm-row"><span>âš </span>
         <span class="alarm-key">${ALARM_LABELS[key] || key}</span>
         <span class="alarm-dur">${dur} min</span></div>`;
     }).join('');
@@ -1694,7 +1694,7 @@ function updateAlarmSection(devKey) {
 function updateStateBadge(devKey) {
   const dev = devices[devKey];
   if (!dev) return;
-  const state = dev.aiState ? dev.aiState.state : (dev.last['stat/status'] || '—');
+  const state = dev.aiState ? dev.aiState.state : (dev.last['stat/status'] || 'â€”');
   const badge = document.querySelector('#dashContent .state-badge');
   if (badge) {
     badge.textContent = state;
@@ -1702,9 +1702,9 @@ function updateStateBadge(devKey) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // CHARTS
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function initCharts(devKey) {
   const dev = devices[devKey];
   if (!dev) return;
@@ -1765,7 +1765,7 @@ function updateChart(devKey, varKey) {
   const chart = charts[canvasId];
   const dev = devices[devKey];
   if (!chart || !dev) {
-    // Chart may not exist yet if this is the first data — schedule a re-render
+    // Chart may not exist yet if this is the first data â€” schedule a re-render
     if (currentDevKey === devKey && !document.getElementById(canvasId)) {
       renderDashboard(devKey);
     }
@@ -1777,9 +1777,9 @@ function updateChart(devKey, varKey) {
   chart.update('none');
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ALARMS SCREEN
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderAlarmsScreen() {
   const allAlarms = [];
   Object.values(devices).forEach(dev => {
@@ -1791,13 +1791,13 @@ function renderAlarmsScreen() {
 
   let html = '<div class="screen-title">Alarmas activas</div>';
   if (allAlarms.length === 0) {
-    html += `<div class="empty"><div class="empty-icon">✅</div><h3>Sin alarmas</h3><p>Todos los equipos operan sin alertas.</p></div>`;
+    html += `<div class="empty"><div class="empty-icon">âœ…</div><h3>Sin alarmas</h3><p>Todos los equipos operan sin alertas.</p></div>`;
   } else {
     html += '<div class="alarm-list">';
     allAlarms.forEach(({ dev, key, data }) => {
       const dur = Math.round((Date.now() - data.ts) / 60000);
       html += `<div class="alarm-row" onclick="openDevice('${dev.ns}/${dev.client}/${dev.device}')">
-        <span>⚠</span>
+        <span>âš </span>
         <div style="flex:1;min-width:0">
           <div class="alarm-key">${ALARM_LABELS[key] || key}</div>
           <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${dev.ns}/${dev.client}/${dev.device}</div>
@@ -1813,23 +1813,23 @@ function renderAlarmsScreen() {
   showScreen('clients');
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // CONFIG SCREEN
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderConfigScreen() {
   const devCount = Object.keys(devices).length;
   const connInfo = loginCfg || {};
 
   const screen = document.getElementById('screenClients');
   screen.innerHTML = `
-    <div class="screen-title">Configuración</div>
+    <div class="screen-title">ConfiguraciÃ³n</div>
     <div class="client-card" style="cursor:default;margin-bottom:16px">
       <div class="client-header">
         <div class="client-info">
-          <div class="client-name">Conexión activa</div>
+          <div class="client-name">ConexiÃ³n activa</div>
           <div class="client-meta">${connInfo.host}:${connInfo.port}</div>
         </div>
-        <span class="client-stat-chip online">● conectado</span>
+        <span class="client-stat-chip online">â— conectado</span>
       </div>
       <div class="client-stats">
         <span class="client-stat-chip">user: ${connInfo.user}</span>
@@ -1845,7 +1845,7 @@ function renderConfigScreen() {
         </div>
       </div>
     </div>
-    <button class="login-btn" style="max-width:400px;margin-top:16px" onclick="doLogout()">Cerrar sesión</button>`;
+    <button class="login-btn" style="max-width:400px;margin-top:16px" onclick="doLogout()">Cerrar sesiÃ³n</button>`;
 
   showScreen('clients');
 }
@@ -1872,9 +1872,9 @@ function doLogout() {
   window.scrollTo(0, 0);
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // HELPERS
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function setConn(state, label) {
   const b = document.getElementById('connBadge');
   b.style.display = 'flex';
@@ -1890,10 +1890,10 @@ function getStateClass(state) {
 }
 
 function requestDiagnosis(devKey) {
-  alert('Esta versión publicada es solo lectura. El diagnóstico remoto debe salir desde un backend o una consola técnica privada.');
+  alert('Esta versiÃ³n publicada es solo lectura. El diagnÃ³stico remoto debe salir desde un backend o una consola tÃ©cnica privada.');
 }
 
-// ── DASHBOARD TABS ───────────────────────────────────────────────────────────
+// â”€â”€ DASHBOARD TABS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buildLlmRequestPayload(devKey) {
   const dev = devices[devKey];
   return {
@@ -1964,7 +1964,7 @@ function renderLlmDiagnosis(report) {
     ${recommended.length ? '<hr class="diag-sep">' + recommended.slice(0,4).map(a => `<div class="diag-act">${escapeHtml(a)}</div>`).join('') : ''}
     ${notRecommended.length ? '<hr class="diag-sep">' + notRecommended.slice(0,3).map(a => `<div class="diag-ev" style="color:var(--orange)">${escapeHtml(a)}</div>`).join('') : ''}
     ${missing.length ? '<hr class="diag-sep">' + missing.slice(0,4).map(a => `<div class="diag-ev">${escapeHtml(a)}</div>`).join('') : ''}
-    <div class="llm-meta">consulta_id=${escapeHtml(report.consulta_id || '-')} · rag=${escapeHtml(report.rag_docs_usados ?? '-')} · ${escapeHtml(report.origen_respuesta || 'IA')}</div>
+    <div class="llm-meta">consulta_id=${escapeHtml(report.consulta_id || '-')} Â· rag=${escapeHtml(report.rag_docs_usados ?? '-')} Â· ${escapeHtml(report.origen_respuesta || 'ollama')}</div>
   </div>`;
 }
 
@@ -1990,7 +1990,7 @@ function switchDashTab(devKeySafe, tab) {
   }
 }
 
-// ── COMMANDS ─────────────────────────────────────────────────────────────────
+// â”€â”€ COMMANDS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buildHistoryHTML(devKey) {
   const safe = devKey.replace(/\//g,'_');
   const today = new Date().toISOString().slice(0, 10);
@@ -2152,7 +2152,7 @@ function renderHistoryData(devKey, data) {
     events.length
       ? events.map(ev => `<div class="diag-box" style="margin-bottom:6px">
           <div class="diag-title">${escapeHtml(ev.title || ev.varKey || ev.topic)}</div>
-          <div class="llm-meta">${escapeHtml(new Date(ev.t).toLocaleString())} · ${escapeHtml(ev.source || '')}</div>
+          <div class="llm-meta">${escapeHtml(new Date(ev.t).toLocaleString())} Â· ${escapeHtml(ev.source || '')}</div>
           <div class="diag-ev">${escapeHtml(ev.text || String(ev.value ?? ev.payload ?? ''))}</div>
         </div>`).join('')
       : `<div class="diag-box"><div class="diag-title">Sin eventos para el rango elegido</div></div>`
@@ -2264,9 +2264,9 @@ function fmtTime(ts) {
   return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
 }
 
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // URL CODE AUTO-LOGIN
-// ═══════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Show login screen on load
 showScreen('login');
 
@@ -2286,3 +2286,4 @@ showScreen('login');
 </script>
 </body>
 </html>
+
